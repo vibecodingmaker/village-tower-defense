@@ -1,30 +1,36 @@
 "use strict";
 // ─── Enemy ────────────────────────────────────────────────────────────────
 class Enemy {
-  constructor(type, waveNum, mods) {
+  // pathArr: the waypoint array this enemy follows (one of the map's roads)
+  constructor(type, waveNum, mods, pathArr) {
     const d   = ENEMY_TYPES[type];
     this.type = type;
     this.name = d.name;
 
-    // ── Wave scaling: HP grows +12% per wave; speed caps at +40% (wave 100+) ──
-    const hpMult  = 1 + (waveNum - 1) * 0.12;
-    const spdMult = 1 + Math.min(waveNum - 1, 100) * 0.004;
-    this.maxHp   = Math.floor(d.hp * hpMult * (mods.hp || 1));
-    this.hp      = this.maxHp;
-    this.speed   = d.speed * spdMult * (mods.speed || 1);
-    // Gold reward scales logarithmically so late waves still feel rewarding
-    this.reward  = Math.floor(d.reward * (1 + Math.log(waveNum + 1) * 0.5) * (mods.reward || 1));
+    // ── Wave scaling ──────────────────────────────────────────────────────
+    // HP: +12%/wave linear; speed: capped at +60% by wave 150
+    // Each map tier (every 10 waves) also adds a 15% tier difficulty bonus
+    const tierBonus = 1 + Math.floor((waveNum - 1) / 10) * 0.15;
+    const hpMult    = 1 + (waveNum - 1) * 0.12;
+    const spdMult   = 1 + Math.min(waveNum - 1, 150) * 0.004;
+    this.maxHp  = Math.floor(d.hp * hpMult * tierBonus * (mods.hp || 1));
+    this.hp     = this.maxHp;
+    this.speed  = d.speed * spdMult * (mods.speed || 1);
+    // Gold scales logarithmically with wave
+    this.reward = Math.floor(d.reward * (1 + Math.log(waveNum + 1) * 0.5) * (mods.reward || 1));
 
-    this.size    = d.size;
-    this.color   = d.color;
-    this.flies   = d.flies  || false;
-    this.wobAmt  = d.wobble || 0;
-    this.isBoss  = d.isBoss || false;
+    this.size   = d.size;
+    this.color  = d.color;
+    this.flies  = d.flies  || false;
+    this.wobAmt = d.wobble || 0;
+    this.isBoss = d.isBoss || false;
 
-    // ── Path tracking ────────────────────────────────────────────────────
+    // ── Path tracking — each enemy owns its road ──────────────────────────
+    // Fall back to first path of first map if nothing passed (should not happen)
+    this.pathArr = pathArr || MAPS[0].paths[0];
     this.seg  = 0;
-    this.x    = PATH[0].x;
-    this.y    = PATH[0].y;
+    this.x    = this.pathArr[0].x;
+    this.y    = this.pathArr[0].y;
     this.dist = 0;
 
     // ── Status effects (applied/refreshed each frame by towers) ──────────
@@ -72,9 +78,10 @@ class Enemy {
   }
 
   _move(rem) {
+    const path = this.pathArr;
     while (rem > 0.01) {
-      if (this.seg >= PATH.length - 1) { this.escaped = true; return; }
-      const to = PATH[this.seg + 1];
+      if (this.seg >= path.length - 1) { this.escaped = true; return; }
+      const to = path[this.seg + 1];
       const dx = to.x - this.x, dy = to.y - this.y;
       const d  = Math.hypot(dx, dy);
       if (d < 0.01) { this.seg++; continue; }
@@ -86,7 +93,7 @@ class Enemy {
         this.dist += rem; rem = 0;
       }
     }
-    if (this.seg >= PATH.length - 1) this.escaped = true;
+    if (this.seg >= path.length - 1) this.escaped = true;
   }
 
   takeDamage(dmg) {

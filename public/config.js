@@ -4,105 +4,133 @@ const CVW = 640, CVH = 480;
 const ROAD_W = 36;
 const SPOT_R = 22;
 
-// ─── Enemy path ────────────────────────────────────────────────────────────
-const PATH = [
-  {x:320, y:500}, {x:320, y:438}, {x:148, y:438}, {x:148, y:322},
-  {x:320, y:322}, {x:320, y:208}, {x:472, y:208}, {x:472, y:108},
-  {x:320, y:108}, {x:320, y:-20},
+// ─── Map library — 5 maps cycling every 10 waves ──────────────────────────
+// Each map: { id, label, paths[][], spots[] }
+// paths = array of waypoint arrays; multi-element = multiple roads
+const MAPS = [
+
+  // ── Map 0: Village Road (original single winding road) ──────────────────
+  {
+    id: 0, label: "Village Road",
+    paths: [[
+      {x:320,y:500},{x:320,y:438},{x:148,y:438},{x:148,y:322},
+      {x:320,y:322},{x:320,y:208},{x:472,y:208},{x:472,y:108},
+      {x:320,y:108},{x:320,y:-20},
+    ]],
+    spots: [
+      {id:0,cx:392,cy:400},{id:1,cx:244,cy:400},{id:2,cx:82,cy:382},
+      {id:3,cx:82,cy:272},{id:4,cx:254,cy:272},{id:5,cx:392,cy:258},
+      {id:6,cx:544,cy:258},{id:7,cx:544,cy:150},{id:8,cx:392,cy:142},
+      {id:9,cx:218,cy:168},{id:10,cx:186,cy:62},{id:11,cx:420,cy:60},
+    ],
+  },
+
+  // ── Map 1: Twin Forks (2 roads — left & right, merge at top) ────────────
+  {
+    id: 1, label: "Twin Forks",
+    paths: [
+      // Left fork
+      [{x:160,y:500},{x:160,y:400},{x:80,y:300},{x:80,y:150},{x:210,y:70},{x:320,y:40},{x:320,y:-20}],
+      // Right fork
+      [{x:480,y:500},{x:480,y:400},{x:560,y:300},{x:560,y:150},{x:430,y:70},{x:320,y:40},{x:320,y:-20}],
+    ],
+    spots: [
+      // Center spine (between the two roads)
+      {id:0,cx:320,cy:450},{id:1,cx:320,cy:340},{id:2,cx:320,cy:210},{id:3,cx:320,cy:120},
+      // Inner flanks
+      {id:4,cx:240,cy:400},{id:5,cx:240,cy:280},{id:6,cx:230,cy:160},
+      {id:7,cx:400,cy:400},{id:8,cx:400,cy:280},{id:9,cx:390,cy:160},
+      // Outer flanks (outside the two forks)
+      {id:10,cx:40,cy:380},{id:11,cx:600,cy:380},
+    ],
+  },
+
+  // ── Map 2: Zigzag Alley (one sweeping zigzag) ────────────────────────────
+  {
+    id: 2, label: "Zigzag Alley",
+    paths: [[
+      {x:320,y:500},{x:320,y:430},
+      {x:80,y:350},{x:560,y:270},
+      {x:80,y:190},{x:560,y:110},
+      {x:320,y:40},{x:320,y:-20},
+    ]],
+    spots: [
+      // Pockets between zigzag sweeps
+      {id:0,cx:80,cy:460},{id:1,cx:560,cy:460},
+      {id:2,cx:460,cy:420},{id:3,cx:560,cy:390},
+      {id:4,cx:170,cy:310},{id:5,cx:460,cy:310},
+      {id:6,cx:170,cy:230},{id:7,cx:80,cy:230},
+      {id:8,cx:460,cy:150},{id:9,cx:170,cy:150},
+      {id:10,cx:170,cy:60},{id:11,cx:460,cy:60},
+    ],
+  },
+
+  // ── Map 3: Spiral Keep (tight inward spiral) ─────────────────────────────
+  {
+    id: 3, label: "Spiral Keep",
+    paths: [[
+      {x:320,y:500},{x:320,y:450},
+      {x:80,y:450},{x:80,y:60},{x:560,y:60},
+      {x:560,y:380},{x:200,y:380},{x:200,y:180},
+      {x:460,y:180},{x:460,y:280},{x:320,y:280},{x:320,y:-20},
+    ]],
+    spots: [
+      // Outer pocket (below lake)
+      {id:0,cx:490,cy:450},{id:1,cx:200,cy:450},
+      // Outer-top pocket
+      {id:2,cx:240,cy:40},{id:3,cx:400,cy:40},
+      // Outer-right pocket
+      {id:4,cx:605,cy:230},{id:5,cx:605,cy:430},
+      // Middle pockets
+      {id:6,cx:40,cy:290},{id:7,cx:40,cy:160},
+      {id:8,cx:340,cy:380},{id:9,cx:340,cy:200},
+      // Inner pockets
+      {id:10,cx:540,cy:190},{id:11,cx:200,cy:270},
+    ],
+  },
+
+  // ── Map 4: Double Cross (2 paths that criss-cross) ───────────────────────
+  {
+    id: 4, label: "Double Cross",
+    paths: [
+      // Left-start, sweeps right toward top
+      [{x:100,y:500},{x:100,y:320},{x:400,y:210},{x:540,y:80},{x:320,y:-20}],
+      // Right-start, sweeps left toward top
+      [{x:540,y:500},{x:540,y:320},{x:240,y:210},{x:100,y:80},{x:320,y:-20}],
+    ],
+    spots: [
+      // Below intersection
+      {id:0,cx:320,cy:450},{id:1,cx:40,cy:450},{id:2,cx:600,cy:450},
+      // Flanks mid-height
+      {id:3,cx:40,cy:290},{id:4,cx:600,cy:290},
+      // Near intersection center
+      {id:5,cx:320,cy:300},{id:6,cx:320,cy:180},
+      // Upper flanks
+      {id:7,cx:40,cy:120},{id:8,cx:600,cy:120},
+      // Top zone
+      {id:9,cx:220,cy:130},{id:10,cx:420,cy:130},{id:11,cx:320,cy:60},
+    ],
+  },
 ];
 
-// ─── Build spots ───────────────────────────────────────────────────────────
-const BUILD_SPOTS = [
-  {id:0,  cx:392, cy:400}, {id:1,  cx:244, cy:400}, {id:2,  cx: 82, cy:382},
-  {id:3,  cx: 82, cy:272}, {id:4,  cx:254, cy:272}, {id:5,  cx:392, cy:258},
-  {id:6,  cx:544, cy:258}, {id:7,  cx:544, cy:150}, {id:8,  cx:392, cy:142},
-  {id:9,  cx:218, cy:168}, {id:10, cx:186, cy: 62}, {id:11, cx:420, cy: 60},
-].map(s => ({...s, tower: null}));
-
 // ─── Tower definitions ─────────────────────────────────────────────────────
-// upgBase: base stats used by formula-based 999-level upgrade system
-// isAura: true = no projectiles, effect applied directly each frame
 const TOWER_TYPES = {
-
-  // ── Classic ──────────────────────────────────────────────────────────────
-  cannon: {
-    name:"Cannon", cost:75, desc:"Powerful cannon — gains splash at higher levels",
-    range:85, damage:18, fireRate:1.40, projSpeed:200, splashR:22,
-    upgBase:{range:85, damage:18, fireRate:1.40, splashR:22}, color:"#889aaa",
-  },
-  archer: {
-    name:"Archer", cost:50, desc:"Fast, long-range precision shots",
-    range:115, damage:9, fireRate:0.55, projSpeed:290, splashR:0,
-    upgBase:{range:115, damage:9, fireRate:0.55}, color:"#9a6830",
-  },
-  spawner: {
-    name:"Barracks", cost:100, desc:"Spawns soldiers to intercept enemies",
-    range:85, damage:0, fireRate:0, projSpeed:0, splashR:0,
-    spawnRate:8, maxSoldiers:2, solHp:35, solDmg:6,
-    upgBase:{range:85, spawnRate:8, maxSoldiers:2, solHp:35, solDmg:6}, color:"#4455aa",
-  },
-
-  // ── Ranged / Mechanical ───────────────────────────────────────────────────
-  prototype: {
-    name:"Prototype", cost:200, desc:"Sniper energy beam — extreme range, piercing shot",
-    range:190, damage:80, fireRate:0.30, projSpeed:450, splashR:0, pierce:true,
-    upgBase:{range:190, damage:80, fireRate:0.30}, color:"#00ffcc",
-  },
-  peacemaker: {
-    name:"Peacemaker", cost:250, desc:"Minigun — extreme fire rate  [unlocks wave 10]",
-    range:90, damage:12, fireRate:4.5, projSpeed:300, splashR:0, minWave:10,
-    upgBase:{range:90, damage:12, fireRate:4.5}, color:"#ff8800",
-  },
-  bonecrusher: {
-    name:"Bone Crusher", cost:175, desc:"Heavy shot — stuns enemies on hit",
-    range:80, damage:35, fireRate:0.85, projSpeed:220, splashR:28, stunDur:1.5,
-    upgBase:{range:80, damage:35, fireRate:0.85, splashR:28, stunDur:1.5}, color:"#aa6633",
-  },
-  poison: {
-    name:"Poison Darts", cost:130, desc:"Poisons enemies — damage over time",
-    range:110, damage:8, fireRate:1.2, projSpeed:260, splashR:0, poisonDps:5, poisonDur:4,
-    upgBase:{range:110, damage:8, fireRate:1.2, poisonDps:5, poisonDur:4}, color:"#44cc22",
-  },
-  missiles: {
-    name:"Smart Missiles", cost:300, desc:"Fires 3 homing missiles simultaneously",
-    range:140, damage:55, fireRate:0.6, projSpeed:180, splashR:35, multiShot:3,
-    upgBase:{range:140, damage:55, fireRate:0.6, splashR:35}, color:"#ff4444",
-  },
-  dagger: {
-    name:"Twins Dagger", cost:200, desc:"Blinding melee DPS — highest potential damage",
-    range:52, damage:22, fireRate:6.0, projSpeed:320, splashR:0,
-    upgBase:{range:52, damage:22, fireRate:6.0}, color:"#cc44cc",
-  },
-
-  // ── Aura / Special ────────────────────────────────────────────────────────
-  golden: {
-    name:"Golden Tower", cost:300, desc:"Aura: +60% gold from kills in range",
-    range:100, damage:0, fireRate:0, projSpeed:0, splashR:0,
-    isAura:true, auraType:"gold",
-    upgBase:{range:100}, color:"#ffdd00",
-  },
-  blackhole: {
-    name:"Black Hole", cost:350, desc:"Pulls enemies toward it and crushes them",
-    range:120, damage:3, fireRate:8, projSpeed:0, splashR:0,
-    isAura:true, auraType:"pull", pullForce:55,
-    upgBase:{range:120, damage:3, pullForce:55}, color:"#6600cc",
-  },
-  chrono: {
-    name:"Chrono Field", cost:250, desc:"Slows all enemies in range by 50%",
-    range:100, damage:0, fireRate:0, projSpeed:0, splashR:0,
-    isAura:true, auraType:"slow", slowFactor:0.5,
-    upgBase:{range:100}, color:"#00aaff",
-  },
-  axe: {
-    name:"Logging Axe", cost:150, desc:"Aura: nearby towers gain +35% dmg & fire rate",
-    range:90, damage:0, fireRate:0, projSpeed:0, splashR:0,
-    isAura:true, auraType:"buff",
-    upgBase:{range:90}, color:"#cc8833",
-  },
+  cannon:     { name:"Cannon",       cost:75,  desc:"Powerful shots; gains splash at higher levels",         range:85,  damage:18, fireRate:1.40, projSpeed:200, splashR:22,  upgBase:{range:85,  damage:18, fireRate:1.40, splashR:22},  color:"#889aaa" },
+  archer:     { name:"Archer",       cost:50,  desc:"Fast, long-range precision shots",                      range:115, damage:9,  fireRate:0.55, projSpeed:290, splashR:0,   upgBase:{range:115, damage:9,  fireRate:0.55},              color:"#9a6830" },
+  spawner:    { name:"Barracks",     cost:100, desc:"Spawns soldiers to intercept enemies",                  range:85,  damage:0,  fireRate:0,    projSpeed:0,   splashR:0,   spawnRate:8, maxSoldiers:2, solHp:35, solDmg:6, upgBase:{range:85, spawnRate:8, maxSoldiers:2, solHp:35, solDmg:6}, color:"#4455aa" },
+  prototype:  { name:"Prototype",    cost:200, desc:"Sniper energy beam — extreme range, piercing",          range:190, damage:80, fireRate:0.30, projSpeed:450, splashR:0,   pierce:true, upgBase:{range:190, damage:80, fireRate:0.30}, color:"#00ffcc" },
+  peacemaker: { name:"Peacemaker",   cost:250, desc:"Minigun — extreme fire rate  [unlocks wave 10]",        range:90,  damage:12, fireRate:4.5,  projSpeed:300, splashR:0,   minWave:10,  upgBase:{range:90,  damage:12, fireRate:4.5},  color:"#ff8800" },
+  bonecrusher:{ name:"Bone Crusher", cost:175, desc:"Heavy shot — stuns enemies on hit",                     range:80,  damage:35, fireRate:0.85, projSpeed:220, splashR:28,  stunDur:1.5, upgBase:{range:80, damage:35, fireRate:0.85, splashR:28, stunDur:1.5}, color:"#aa6633" },
+  poison:     { name:"Poison Darts", cost:130, desc:"Poisons enemies — damage over time",                    range:110, damage:8,  fireRate:1.2,  projSpeed:260, splashR:0,   poisonDps:5, poisonDur:4, upgBase:{range:110, damage:8, fireRate:1.2, poisonDps:5, poisonDur:4}, color:"#44cc22" },
+  missiles:   { name:"Smart Missiles",cost:300,desc:"Fires 3 homing missiles simultaneously",                range:140, damage:55, fireRate:0.6,  projSpeed:180, splashR:35,  multiShot:3, upgBase:{range:140, damage:55, fireRate:0.6, splashR:35}, color:"#ff4444" },
+  dagger:     { name:"Twins Dagger", cost:200, desc:"Melee — fastest DPS, short range",                     range:52,  damage:22, fireRate:6.0,  projSpeed:320, splashR:0,   upgBase:{range:52,  damage:22, fireRate:6.0},              color:"#cc44cc" },
+  golden:     { name:"Golden Tower", cost:300, desc:"Aura: +60% gold from kills in range",                   range:100, damage:0,  fireRate:0,    projSpeed:0,   splashR:0,   isAura:true, auraType:"gold",                 upgBase:{range:100}, color:"#ffdd00" },
+  blackhole:  { name:"Black Hole",   cost:350, desc:"Pulls enemies toward it and crushes them",              range:120, damage:3,  fireRate:8,    projSpeed:0,   splashR:0,   isAura:true, auraType:"pull", pullForce:55,   upgBase:{range:120, damage:3, pullForce:55}, color:"#6600cc" },
+  chrono:     { name:"Chrono Field", cost:250, desc:"Slows all enemies in range by 50%",                     range:100, damage:0,  fireRate:0,    projSpeed:0,   splashR:0,   isAura:true, auraType:"slow", slowFactor:0.5, upgBase:{range:100}, color:"#00aaff" },
+  axe:        { name:"Logging Axe",  cost:150, desc:"Aura: nearby towers gain +35% dmg & fire rate",         range:90,  damage:0,  fireRate:0,    projSpeed:0,   splashR:0,   isAura:true, auraType:"buff",                 upgBase:{range:90},  color:"#cc8833" },
 };
 
 // ─── Enemy definitions ─────────────────────────────────────────────────────
-// HP / speed / reward are BASE values — wave scaling is applied in the Enemy constructor
 const ENEMY_TYPES = {
   goblin:     { name:"Goblin",       hp:  45, speed: 72, reward:  5, size:10, color:"#22aa22", wobble: 0, flies:false },
   skeleton:   { name:"Skeleton",     hp:  70, speed: 60, reward:  8, size:10, color:"#ddddaa", wobble: 0, flies:false },
@@ -117,12 +145,22 @@ const ENEMY_TYPES = {
 };
 
 // ─── Wave generator ────────────────────────────────────────────────────────
-// Enemies unlock by wave; boss spawns every 5 waves (stronger each time)
-function generateWave(n) {
+// numPaths: how many roads in the current map — enemies distributed across them
+function generateWave(n, numPaths) {
+  numPaths = numPaths || 1;
   const q   = [];
   const gap = t => Math.max(0.4, t - (n - 1) * 0.04);
+
+  // Difficulty tier bonus: each set of 10 waves adds 20% more enemies
+  const tierMult = 1 + Math.floor((n - 1) / 10) * 0.2;
+
   const add = (type, cnt, fw, sw) => {
-    for (let i = 0; i < cnt; i++) q.push({ type, wait: i === 0 ? fw : gap(sw) });
+    const total = Math.round(cnt * tierMult);
+    for (let i = 0; i < total; i++) {
+      // Distribute evenly across roads; bosses always path 0
+      const pathIdx = (numPaths > 1 && type !== "boss") ? (i % numPaths) : 0;
+      q.push({ type, wait: i === 0 ? fw : gap(sw), pathIdx });
+    }
   };
 
   add("goblin",      Math.min(6  + Math.ceil(n * 1.6),  40), 1.5, 1.2);
@@ -134,8 +172,7 @@ function generateWave(n) {
   if (n >= 9)  add("harpy",       Math.min(Math.ceil((n-8)*0.6), 12), 1.5, 1.8);
   if (n >= 12) add("necromancer", Math.min(Math.ceil((n-11)*0.3), 5), 3.0, 6.0);
   if (n >= 15) add("demon",       Math.min(Math.ceil((n-14)*0.3), 6), 2.5, 3.5);
-  // Boss: 1 at wave 5, +1 extra per 25 waves
-  if (n % 5 === 0) add("boss", 1 + Math.floor(n / 25), 5.0, 8.0);
+  if (n % 5 === 0) add("boss",    1 + Math.floor(n / 25), 5.0, 8.0);
 
   return q;
 }

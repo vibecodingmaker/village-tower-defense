@@ -31,7 +31,17 @@ function drawBackground(ctx) {
   }
   ctx.fillStyle="#1a4a7a"; ctx.font="7px monospace"; ctx.fillText("~ LAKE ~",30,62);
 
-  drawRoad(ctx);
+  // Draw all roads for the current map (G may have multiple paths)
+  const paths = (typeof G !== "undefined" && G.currentMap) ? G.currentMap.paths : MAPS[0].paths;
+  paths.forEach((p, i) => drawRoad(ctx, p, i));
+
+  // Map label (bottom-left corner)
+  if (typeof G !== "undefined" && G.currentMap) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(10, CVH-22, 160, 16);
+    ctx.fillStyle = "#aaccff"; ctx.font = "7px monospace";
+    ctx.fillText(`🗺 ${G.currentMap.label}  (Map ${G.currentMap.id + 1}/5)`, 14, CVH-10);
+  }
+
   _building(ctx,522,18,90,74,"INN","#7a4a18","#cc3333");
   _building(ctx,508,328,102,82,"PUB","#6a3a10","#aa2222");
   _watchtower(ctx,10,10,28,86);
@@ -43,20 +53,36 @@ function drawBackground(ctx) {
   trees.forEach(([x,y])=>_tree(ctx,x,y));
 }
 
-function drawRoad(ctx) {
+// pathArr: waypoint array; roadIdx: used to tint dual roads slightly differently
+function drawRoad(ctx, pathArr, roadIdx) {
+  if (!pathArr || pathArr.length < 2) return;
   ctx.lineCap="round"; ctx.lineJoin="round";
-  ctx.strokeStyle="#4a2800"; ctx.lineWidth=ROAD_W+6;
-  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
-  PATH.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
-  ctx.strokeStyle="#8B6014"; ctx.lineWidth=ROAD_W;
-  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
-  PATH.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
-  ctx.strokeStyle="#c09030"; ctx.lineWidth=ROAD_W-14;
-  ctx.beginPath(); ctx.moveTo(PATH[0].x,PATH[0].y);
-  PATH.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+  // Dual-road tint: second road gets a slightly warmer hue
+  const dirtFill   = roadIdx === 1 ? "#9a6820" : "#8B6014";
+  const centerFill = roadIdx === 1 ? "#d09840" : "#c09030";
+  const shadowCol  = roadIdx === 1 ? "#5a3000" : "#4a2800";
+
+  ctx.strokeStyle=shadowCol; ctx.lineWidth=ROAD_W+6;
+  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
+  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+  ctx.strokeStyle=dirtFill; ctx.lineWidth=ROAD_W;
+  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
+  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+  ctx.strokeStyle=centerFill; ctx.lineWidth=ROAD_W-14;
+  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
+  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+  // Small pebbles near centre of path
   ctx.fillStyle="#7a5010";
-  [[316,452],[324,402],[144,382],[148,302],[318,267],[322,164],[468,167],[474,142],[316,82]]
-    .forEach(([x,y])=>ctx.fillRect(x,y,4,3));
+  for (let i = 1; i < pathArr.length; i++) {
+    const ax=pathArr[i-1].x, ay=pathArr[i-1].y;
+    const bx=pathArr[i].x,   by=pathArr[i].y;
+    const mx=(ax+bx)/2|0, my=(ay+by)/2|0;
+    ctx.fillRect(mx-2, my-1, 4, 3);
+  }
 }
 
 function _building(ctx,x,y,w,h,label,wall,roof) {
@@ -95,18 +121,42 @@ function _tree(ctx,x,y) {
 }
 
 // ─── Build spots ──────────────────────────────────────────────────────────
-function drawBuildSpots(ctx, spots, selId) {
+// moveMode: true when a tower is being relocated — open spots glow blue
+function drawBuildSpots(ctx, spots, selId, moveMode) {
   for (const s of spots) {
     if (s.tower) continue;
     const hov = s.id === selId;
-    ctx.globalAlpha = hov ? 0.78 : 0.50;
-    $r(ctx,s.cx-SPOT_R,s.cy-SPOT_R,SPOT_R*2,SPOT_R*2,hov?"#00ff88":"#88ff88");
+    const col  = moveMode ? (hov ? "#00ccff" : "#44aaff") : (hov ? "#00ff88" : "#88ff88");
+    const bord = moveMode ? (hov ? "#00aaff" : "#2288cc") : (hov ? "#00cc44" : "#44aa44");
+    ctx.globalAlpha = hov ? 0.82 : 0.55;
+    $r(ctx,s.cx-SPOT_R,s.cy-SPOT_R,SPOT_R*2,SPOT_R*2,col);
     ctx.globalAlpha=1;
-    ctx.strokeStyle=hov?"#00cc44":"#44aa44"; ctx.lineWidth=2;
+    ctx.strokeStyle=bord; ctx.lineWidth=2;
     ctx.strokeRect(s.cx-SPOT_R,s.cy-SPOT_R,SPOT_R*2,SPOT_R*2);
-    $r(ctx,s.cx-1,s.cy-7,2,14,hov?"#00cc44":"#44aa44");
-    $r(ctx,s.cx-7,s.cy-1,14,2,hov?"#00cc44":"#44aa44");
+    $r(ctx,s.cx-1,s.cy-7,2,14,bord);
+    $r(ctx,s.cx-7,s.cy-1,14,2,bord);
+    if (moveMode) {
+      // "Place here" arrow
+      ctx.fillStyle=bord; ctx.font="10px monospace"; ctx.textAlign="center";
+      ctx.fillText("↓", s.cx, s.cy+4);
+      ctx.textAlign="left";
+    }
   }
+}
+
+// Draw the "floating" tower being moved (follows mouse via G.mouseX/Y)
+function drawMovingTower(ctx, tower, mx, my) {
+  if (!tower) return;
+  ctx.globalAlpha = 0.72;
+  ctx.save();
+  ctx.translate(mx - tower.cx + tower.cx, my - tower.cy + tower.cy);
+  drawTower(ctx, { ...tower, cx: mx, cy: my, flash: 0 });
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  // Label
+  ctx.fillStyle = "#00ccff"; ctx.font = "bold 8px monospace"; ctx.textAlign = "center";
+  ctx.fillText(`📦 ${tower.name}`, mx, my - 30);
+  ctx.textAlign = "left";
 }
 
 // ─── Tower drawing ────────────────────────────────────────────────────────
@@ -559,28 +609,48 @@ function drawRange(ctx, tower, tMod) {
 // ─── Title screen ─────────────────────────────────────────────────────────
 function drawTitle(ctx) {
   ctx.fillStyle = "rgba(0,0,0,0.70)"; ctx.fillRect(0, 0, CVW, CVH);
-  $r(ctx, 60, 110, 520, 20, "#cc2200"); $r(ctx, 60, 130, 520, 2, "#ff4400");
+  $r(ctx, 60, 100, 520, 20, "#cc2200"); $r(ctx, 60, 120, 520, 2, "#ff4400");
   ctx.fillStyle = "#ffdd00"; ctx.font = "bold 20px 'Press Start 2P',monospace";
-  ctx.textAlign = "center"; ctx.fillText("VILLAGE TOWER DEFENSE", CVW/2, 140);
-  $r(ctx, 80, 155, 480, 240, "rgba(8,8,24,0.94)");
-  ctx.strokeStyle = "#334466"; ctx.lineWidth = 2; ctx.strokeRect(80, 155, 480, 240);
+  ctx.textAlign = "center"; ctx.fillText("VILLAGE TOWER DEFENSE", CVW/2, 130);
+  $r(ctx, 70, 145, 500, 290, "rgba(8,8,24,0.94)");
+  ctx.strokeStyle = "#334466"; ctx.lineWidth = 2; ctx.strokeRect(70, 145, 500, 290);
 
   ctx.fillStyle = "#88aaff"; ctx.font = "8px 'Press Start 2P',monospace";
-  ctx.fillText("Defend your village — 13 towers, 10 enemy types!", CVW/2, 178);
+  ctx.fillText("13 towers · 10 enemies · 5 rotating maps", CVW/2, 168);
   ctx.fillStyle = "#ffddaa"; ctx.font = "7px monospace";
   const lines = [
-    "🏰 Cannon / 🏹 Archer / ⚔ Barracks — Classic towers",
-    "⚡ Prototype — piercing sniper beam",
-    "🔫 Peacemaker — minigun (Wave 10+)",
-    "💥 Bone Crusher — stuns enemies",
-    "☠ Poison Darts — damage over time",
-    "🚀 Smart Missiles — fires 3 at once",
-    "🗡 Twins Dagger — highest DPS",
-    "🌟 Golden Tower / ⏱ Chrono / 🕳 Black Hole / 🪓 Axe — Auras",
-    "Upgrade to Level 999! Enemies scale with waves.",
+    "🗺 Map rotates every 10 waves! New layout + bonus gold & lives",
+    "🔀 Relocate towers FREE before each wave",
+    "─────────────────────────────────────────",
+    "Classic:  🏰 Cannon  🏹 Archer  ⚔ Barracks",
+    "Weapons:  ⚡ Prototype  🔫 Peacemaker(W10)  💥 Bone Crusher",
+    "          ☠ Poison  🚀 Missiles  🗡 Twins Dagger",
+    "Auras:    🌟 Golden  🕳 Black Hole  ⏱ Chrono  🪓 Logging Axe",
+    "─────────────────────────────────────────",
+    "Maps:  Village Road · Twin Forks · Zigzag Alley",
+    "       Spiral Keep · Double Cross  (2 roads!)",
+    "Upgrade towers to Level 999!  Enemies get harder each tier.",
   ];
-  lines.forEach((l, i) => ctx.fillText(l, CVW/2, 200 + i*18));
+  lines.forEach((l, i) => ctx.fillText(l, CVW/2, 192 + i*20));
   ctx.fillStyle = "#88ff88"; ctx.font = "9px 'Press Start 2P',monospace";
-  ctx.fillText("▶ Click to begin", CVW/2, 370);
+  ctx.fillText("▶ Click to begin", CVW/2, 418);
+  ctx.textAlign = "left";
+}
+
+// ─── Map-change banner (rendered over gameplay canvas) ────────────────────
+function drawMapChangeBanner(ctx, mapName, mapId, bonus) {
+  ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(60, 140, 520, 200);
+  ctx.strokeStyle = "#ffcc00"; ctx.lineWidth = 3; ctx.strokeRect(60, 140, 520, 200);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffcc00"; ctx.font = "bold 14px 'Press Start 2P',monospace";
+  ctx.fillText("🗺 MAP CHANGED!", CVW/2, 178);
+  ctx.fillStyle = "#88aaff"; ctx.font = "10px 'Press Start 2P',monospace";
+  ctx.fillText(mapName, CVW/2, 208);
+  ctx.fillStyle = "#ffddaa"; ctx.font = "8px monospace";
+  ctx.fillText(`Map ${mapId + 1} of 5  •  All towers refunded at 100%`, CVW/2, 236);
+  ctx.fillStyle = "#88ff88"; ctx.font = "9px monospace";
+  ctx.fillText(`+${bonus.gold}g bonus  +${bonus.lives} lives  Relocate towers freely!`, CVW/2, 262);
+  ctx.fillStyle = "#88aaff"; ctx.font = "7px 'Press Start 2P',monospace";
+  ctx.fillText("Place your towers, then press START WAVE", CVW/2, 296);
   ctx.textAlign = "left";
 }
