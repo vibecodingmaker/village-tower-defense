@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Village Tower Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="container">
+    <div id="canvas-wrap">
+      <canvas id="game" width="640" height="480"></canvas>
+    </div>
+    <div id="sidebar">
+      <h2 id="game-title">⚔ Village TD</h2>
+
+      <div id="stats">
+        <div class="stat"><span class="lbl">Wave</span><span id="wave-num" class="val">0</span></div>
+        <div class="stat"><span class="lbl">💰 Gold</span><span id="gold" class="val">150</span></div>
+        <div class="stat"><span class="lbl">❤ Lives</span><span id="lives" class="val">10</span></div>
+        <div class="stat"><span class="lbl">Score</span><span id="score" class="val">0</span></div>
+        <div class="stat"><span class="lbl">Best</span><span id="best" class="val">0</span></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="sec-title">BUILD TOWERS</div>
+      <div id="tower-select">
+        <button class="tbtn" data-type="cannon">🏰 Cannon (75g)</button>
+        <button class="tbtn" data-type="archer">🏹 Archer (50g)</button>
+        <button class="tbtn" data-type="spawner">⚔ Barracks (100g)</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="sec-title">INFO</div>
+      <div id="info-content">Click a <span style="color:#88ff88">■</span> to build<br>Click tower to manage</div>
+      <button id="upgrade-btn" style="display:none">⬆ Upgrade</button>
+      <button id="sell-btn"    style="display:none">💰 Sell</button>
+
+      <div class="divider"></div>
+      <div id="event-box" style="display:none">
+        <div class="sec-title">⚡ WAVE EVENT</div>
+        <div id="event-text"></div>
+      </div>
+
+      <button id="start-btn">▶ START WAVE</button>
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <div id="overlay" style="display:none">
+    <div id="ov-box">
+      <h2 id="ov-title"></h2>
+      <p  id="ov-body"></p>
+      <button id="ov-btn">▶ Play Again</button>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="entities.js"></script>
+  <script src="render.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

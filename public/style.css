@@ -1,0 +1,123 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a1a;
+  color: #eee;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 9px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 8px;
+  gap: 8px;
+}
+
+#container { display: flex; gap: 8px; align-items: flex-start; }
+#canvas-wrap { position: relative; }
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 3px solid #334466;
+  background: #000;
+}
+
+#sidebar {
+  width: 178px;
+  min-width: 178px;
+  background: #111828;
+  border: 2px solid #334466;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#game-title {
+  color: #ffcc00;
+  font-size: 12px;
+  text-align: center;
+  text-shadow: 0 0 10px #ffcc0099;
+  margin-bottom: 2px;
+}
+
+#stats { display: flex; flex-direction: column; gap: 2px; }
+.stat {
+  display: flex; justify-content: space-between;
+  background: #0d1220; padding: 3px 5px;
+  border: 1px solid #22334a;
+}
+.lbl { color: #8899bb; font-size: 7px; }
+.val { color: #ffcc00; font-size: 9px; }
+
+.divider { height: 1px; background: #334466; margin: 1px 0; }
+.sec-title { color: #8899bb; font-size: 7px; margin-bottom: 3px; }
+
+.tbtn {
+  display: block; width: 100%;
+  background: #1a2a4a; border: 1px solid #336699;
+  color: #88aaff; font-family: inherit; font-size: 8px;
+  padding: 5px 4px; cursor: pointer; margin-bottom: 3px;
+  text-align: left; line-height: 1.4;
+}
+.tbtn:hover { background: #243a6a; border-color: #5588bb; color: #aaccff; }
+.tbtn:active { background: #0d1830; }
+.tbtn.active { background: #0d3a2a; border-color: #44cc88; color: #88ffcc; }
+
+#info-content {
+  background: #0d1220; border: 1px solid #22334a;
+  padding: 5px; font-size: 8px; line-height: 1.7;
+  min-height: 64px; color: #ccd; word-break: break-word;
+}
+
+#upgrade-btn, #sell-btn {
+  width: 100%; margin-top: 3px; padding: 5px 4px;
+  font-family: inherit; font-size: 8px; cursor: pointer; border: 1px solid;
+}
+#upgrade-btn { background:#1a3a1a; border-color:#4a8a4a; color:#88ff88; }
+#upgrade-btn:hover { background:#2a5a2a; }
+#sell-btn    { background:#3a1a0a; border-color:#8a5a1a; color:#ffaa44; }
+#sell-btn:hover    { background:#4a2a1a; }
+#upgrade-btn:disabled, #sell-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+#event-box {
+  background: #2a1a00; border: 1px solid #aa6600;
+  padding: 5px; color: #ffcc44; font-size: 7px; line-height: 1.7;
+}
+
+#start-btn {
+  background: #1a2a1a; border: 2px solid #4a8a4a;
+  color: #88ff88; font-family: inherit; font-size: 9px;
+  padding: 8px 4px; cursor: pointer; width: 100%;
+}
+#start-btn:hover { background: #2a5a2a; }
+#start-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+#message { min-height: 32px; font-size: 7px; color: #ffee44; line-height: 1.6; word-break: break-word; }
+
+#overlay {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,.78); display: flex;
+  justify-content: center; align-items: center; z-index: 100;
+}
+#ov-box {
+  background: #111828; border: 3px solid #ffcc00;
+  padding: 28px 36px; text-align: center; max-width: 420px;
+}
+#ov-title { color: #ff4444; font-size: 16px; margin-bottom: 14px; }
+#ov-body  { color: #eee;    font-size: 9px;  line-height: 2.2; margin-bottom: 18px; }
+#ov-btn {
+  background: #1a3a1a; border: 2px solid #4a8a4a;
+  color: #88ff88; font-family: inherit; font-size: 11px;
+  padding: 10px 24px; cursor: pointer;
+}
+#ov-btn:hover { background: #2a5a2a; }
+
+@media (max-width: 900px) {
+  body { flex-direction: column; align-items: center; }
+  #container { flex-direction: column; }
+  #sidebar { width: 100%; min-width: unset; flex-direction: row; flex-wrap: wrap; }
+  canvas { max-width: 100%; height: auto; }
+}
