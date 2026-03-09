@@ -1,10 +1,10 @@
 {
-  "name": "village-td",
+  "name": "village-tower-defense",
   "version": "1.0.0",
-  "description": "Pixel art village tower defense — procedural canvas, no external assets",
-  "main": "server.js",
+  "description": "Pixel art village tower defense – procedural Canvas 2D, no external assets",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo 'Static site – no build needed'"
   },
   "dependencies": {
     "express": "^4.18.2"
