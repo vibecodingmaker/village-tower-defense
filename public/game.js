@@ -4,12 +4,32 @@ const canvas = document.getElementById("game");
 const ctx    = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
+function isMobile() { return window.innerWidth <= 900; }
+
 function fitCanvas() {
-  const sx = (window.innerWidth  - 220) / CVW;
-  const sy =  window.innerHeight         / CVH;
-  const s  = Math.min(1, sx, sy);
-  canvas.style.width  = (CVW * s) + "px";
-  canvas.style.height = (CVH * s) + "px";
+  if (isMobile()) {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (isLandscape) {
+      // Landscape phone: sidebar is 160px beside canvas
+      const w = window.innerWidth - 160;
+      const h = window.innerHeight;
+      const s = Math.min(w / CVW, h / CVH);
+      canvas.style.width  = (CVW * s) + "px";
+      canvas.style.height = (CVH * s) + "px";
+    } else {
+      // Portrait phone: canvas fills full width
+      const w = window.innerWidth;
+      canvas.style.width  = w + "px";
+      canvas.style.height = Math.round(w * CVH / CVW) + "px";
+    }
+  } else {
+    // Desktop
+    const sx = (window.innerWidth  - 220) / CVW;
+    const sy =  window.innerHeight         / CVH;
+    const s  = Math.min(1, sx, sy);
+    canvas.style.width  = (CVW * s) + "px";
+    canvas.style.height = (CVH * s) + "px";
+  }
 }
 window.addEventListener("resize", fitCanvas);
 fitCanvas();
@@ -280,53 +300,42 @@ window.addEventListener("keydown", e => {
   if (e.key === "Escape" && G.movingTower) { el.cancelBtn.click(); }
 });
 
-// ─── Canvas interaction ───────────────────────────────────────────────────
-canvas.addEventListener("mousemove", e => {
-  const r  = canvas.getBoundingClientRect();
-  G.mouseX = (e.clientX - r.left) * (CVW / r.width);
-  G.mouseY = (e.clientY - r.top)  * (CVH / r.height);
-  if (G.state !== "playing") return;
-  let hov = false;
-  for (const s of G.spots) {
-    if (!s.tower && Math.abs(G.mouseX - s.cx) <= SPOT_R && Math.abs(G.mouseY - s.cy) <= SPOT_R) { hov = true; break; }
-  }
-  canvas.style.cursor = (hov || G.placing || G.movingTower) ? "pointer" : "default";
-});
+// ─── Canvas coordinate helpers ────────────────────────────────────────────
+function clientToCanvas(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    mx: (clientX - r.left) * (CVW / r.width),
+    my: (clientY - r.top)  * (CVH / r.height),
+  };
+}
 
-canvas.addEventListener("click", e => {
+// ─── Core canvas interaction logic (shared by mouse & touch) ─────────────
+function canvasClickAt(mx, my) {
   if (G.state === "title") { initGame(); return; }
   if (G.state !== "playing") return;
-
-  const r  = canvas.getBoundingClientRect();
-  const mx = (e.clientX - r.left) * (CVW / r.width);
-  const my = (e.clientY - r.top)  * (CVH / r.height);
 
   for (const s of G.spots) {
     if (Math.abs(mx - s.cx) > SPOT_R || Math.abs(my - s.cy) > SPOT_R) continue;
 
-    // ── Relocating a tower ──────────────────────────────────────────────
     if (G.movingTower) {
       if (!s.tower) {
-        // Place the moving tower here
         s.tower = G.movingTower;
         G.movingTower.cx = s.cx; G.movingTower.cy = s.cy;
         G.movingTower.spotId = s.id;
         for (const sol of G.movingTower.soldiers) { sol.homeX = s.cx; sol.homeY = s.cy; }
         G.selTower = G.movingTower;
         G.movingTower = null;
-        showMsg("Tower relocated!"); updateInfo(); return;
+        showMsg("Tower relocated!"); updateInfo(); scrollToInfo(); return;
       }
       showMsg("That spot is occupied!"); return;
     }
 
-    // ── Select existing tower ───────────────────────────────────────────
     if (s.tower) {
       G.selTower = s.tower; G.selSpot = s.id; G.placing = null;
       document.querySelectorAll(".tbtn").forEach(b => b.classList.remove("active"));
-      updateInfo(); return;
+      updateInfo(); scrollToInfo(); return;
     }
 
-    // ── Place new tower ─────────────────────────────────────────────────
     if (G.placing) {
       const d = TOWER_TYPES[G.placing];
       if (d.minWave && G.wave < d.minWave) { showMsg(`Unlocks at Wave ${d.minWave}!`); return; }
@@ -343,12 +352,64 @@ canvas.addEventListener("click", e => {
     G.selSpot = s.id; G.selTower = null; updateInfo(); return;
   }
 
-  // Clicked empty canvas
-  if (G.movingTower) { showMsg("Click a blue ■ spot to place the tower (ESC to cancel)"); return; }
+  if (G.movingTower) { showMsg("Tap a blue ■ to place (ESC/button to cancel)"); return; }
   G.selSpot = null; G.selTower = null; G.placing = null;
   document.querySelectorAll(".tbtn").forEach(b => b.classList.remove("active"));
   updateInfo();
+}
+
+// On mobile, scroll the info panel into view after selecting a tower
+function scrollToInfo() {
+  if (isMobile()) {
+    const infoEl = document.getElementById("info-content");
+    if (infoEl) infoEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+// ─── Mouse events ─────────────────────────────────────────────────────────
+canvas.addEventListener("mousemove", e => {
+  const { mx, my } = clientToCanvas(e.clientX, e.clientY);
+  G.mouseX = mx; G.mouseY = my;
+  if (G.state !== "playing") return;
+  let hov = false;
+  for (const s of G.spots) {
+    if (!s.tower && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
+  }
+  canvas.style.cursor = (hov || G.placing || G.movingTower) ? "pointer" : "default";
 });
+
+canvas.addEventListener("click", e => {
+  const { mx, my } = clientToCanvas(e.clientX, e.clientY);
+  canvasClickAt(mx, my);
+});
+
+// ─── Touch events (mobile) ────────────────────────────────────────────────
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault(); // prevent scroll / double-tap zoom
+  if (e.touches.length === 0) return;
+  const { mx, my } = clientToCanvas(e.touches[0].clientX, e.touches[0].clientY);
+  G.mouseX = mx; G.mouseY = my;
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 0) return;
+  const { mx, my } = clientToCanvas(e.touches[0].clientX, e.touches[0].clientY);
+  G.mouseX = mx; G.mouseY = my;
+  // Update hover cursor feedback
+  let hov = false;
+  for (const s of G.spots) {
+    if (!s.tower && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
+  }
+  canvas.style.cursor = (hov || G.placing || G.movingTower) ? "pointer" : "default";
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  if (e.changedTouches.length === 0) return;
+  const { mx, my } = clientToCanvas(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  canvasClickAt(mx, my);
+}, { passive: false });
 
 // ─── Wave management ──────────────────────────────────────────────────────
 function startWave() {
