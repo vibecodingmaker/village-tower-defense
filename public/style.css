@@ -25,15 +25,20 @@ canvas {
 }
 
 #sidebar {
-  width: 178px;
-  min-width: 178px;
+  width: 195px;
+  min-width: 195px;
+  max-height: 100vh;
+  overflow-y: auto;
   background: #111828;
   border: 2px solid #334466;
   padding: 8px 6px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: #0a0a1a; }
+#sidebar::-webkit-scrollbar-thumb { background: #334466; }
 
 #game-title {
   color: #ffcc00;
@@ -58,8 +63,8 @@ canvas {
 .tbtn {
   display: block; width: 100%;
   background: #1a2a4a; border: 1px solid #336699;
-  color: #88aaff; font-family: inherit; font-size: 8px;
-  padding: 5px 4px; cursor: pointer; margin-bottom: 3px;
+  color: #88aaff; font-family: inherit; font-size: 7px;
+  padding: 4px 4px; cursor: pointer; margin-bottom: 2px;
   text-align: left; line-height: 1.4;
 }
 .tbtn:hover { background: #243a6a; border-color: #5588bb; color: #aaccff; }
