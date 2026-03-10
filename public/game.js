@@ -316,6 +316,7 @@ function canvasClickAt(mx, my) {
 
   for (const s of G.spots) {
     if (Math.abs(mx - s.cx) > SPOT_R || Math.abs(my - s.cy) > SPOT_R) continue;
+    if (isSpotBlocked(s.cx, s.cy)) continue;   // blocked spots are non-interactive
 
     if (G.movingTower) {
       if (!s.tower) {
@@ -373,7 +374,7 @@ canvas.addEventListener("mousemove", e => {
   if (G.state !== "playing") return;
   let hov = false;
   for (const s of G.spots) {
-    if (!s.tower && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
+    if (!s.tower && !isSpotBlocked(s.cx,s.cy) && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
   }
   canvas.style.cursor = (hov || G.placing || G.movingTower) ? "pointer" : "default";
 });
@@ -399,7 +400,7 @@ canvas.addEventListener("touchmove", e => {
   // Update hover cursor feedback
   let hov = false;
   for (const s of G.spots) {
-    if (!s.tower && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
+    if (!s.tower && !isSpotBlocked(s.cx,s.cy) && Math.abs(mx - s.cx) <= SPOT_R && Math.abs(my - s.cy) <= SPOT_R) { hov = true; break; }
   }
   canvas.style.cursor = (hov || G.placing || G.movingTower) ? "pointer" : "default";
 }, { passive: false });

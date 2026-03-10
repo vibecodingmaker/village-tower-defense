@@ -20,12 +20,11 @@ const MAPS = [
       {x:320,y:322},{x:320,y:208},{x:472,y:208},{x:472,y:108},
       {x:320,y:108},{x:320,y:-20},
     ]],
-    // All spots computed at exactly 45 px perpendicular from nearest segment
     spots: [
-      {id: 0, cx:275, cy:469}, // left  of entry vertical  x=320
-      {id: 1, cx:365, cy:469}, // right of entry vertical
+      {id: 0, cx:275, cy:448}, // left  of entry vertical  x=320
+      {id: 1, cx:365, cy:448}, // right of entry vertical
       {id: 2, cx:234, cy:393}, // above horizontal y=438
-      {id: 3, cx:103, cy:380}, // left  of vertical x=148
+      {id: 3, cx:103, cy:310}, // left  of vertical x=148 (above tree cluster)
       {id: 4, cx:180, cy:277}, // above horizontal y=322 (left portion)
       {id: 5, cx:275, cy:265}, // left  of vertical x=320 (mid)
       {id: 6, cx:365, cy:265}, // right of vertical x=320 (mid)
@@ -44,20 +43,19 @@ const MAPS = [
       [{x:160,y:500},{x:160,y:400},{x:80,y:300},{x:80,y:150},{x:210,y:70},{x:320,y:40},{x:320,y:-20}],
       [{x:480,y:500},{x:480,y:400},{x:560,y:300},{x:560,y:150},{x:430,y:70},{x:320,y:40},{x:320,y:-20}],
     ],
-    // Spots placed on both outer flanks, exactly 45 px from each road segment
     spots: [
       {id: 0, cx:115, cy:450}, // left  of left-entry  x=160
-      {id: 1, cx:205, cy:450}, // right of left-entry
+      {id: 1, cx:205, cy:400}, // right of left-entry (shifted up to clear tree)
       {id: 2, cx: 35, cy:225}, // left  of left-vertical x=80
       {id: 3, cx:125, cy:225}, // right of left-vertical
-      {id: 4, cx: 35, cy:148}, // left  of left-vertical top (45 px from (80,150))
-      {id: 5, cx:435, cy:450}, // left  of right-entry x=480
+      {id: 4, cx: 35, cy:148}, // left  of left-vertical top
+      {id: 5, cx:435, cy:400}, // left  of right-entry x=480 (shifted up to clear tree)
       {id: 6, cx:525, cy:450}, // right of right-entry
-      {id: 7, cx:515, cy:225}, // left  of right-vertical x=560
+      {id: 7, cx:515, cy:250}, // left  of right-vertical x=560 (shifted down to clear tree)
       {id: 8, cx:605, cy:225}, // right of right-vertical
-      {id: 9, cx:605, cy:148}, // right of right-vertical top (45 px from (560,150))
-      {id:10, cx:220, cy:118}, // below left upper-diagonal  (~46 px from road)
-      {id:11, cx:420, cy:118}, // below right upper-diagonal (~46 px from road)
+      {id: 9, cx:605, cy:148}, // right of right-vertical top
+      {id:10, cx:220, cy:118}, // below left upper-diagonal
+      {id:11, cx:420, cy:118}, // below right upper-diagonal
     ],
   },
 
@@ -70,20 +68,19 @@ const MAPS = [
       {x:80,y:190},{x:560,y:110},
       {x:320,y:40},{x:320,y:-20},
     ]],
-    // Spots hug the turning corners (45 px) or sit diagonally beside them (≤64 px)
     spots: [
-      {id: 0, cx:275, cy:462}, // left  of entry x=320
-      {id: 1, cx:365, cy:462}, // right of entry
+      {id: 0, cx:275, cy:448}, // left  of entry x=320
+      {id: 1, cx:365, cy:448}, // right of entry
       {id: 2, cx: 35, cy:350}, // 45 px left of turn (80,350)
       {id: 3, cx: 35, cy:190}, // 45 px left of turn (80,190)
       {id: 4, cx:605, cy:270}, // 45 px right of turn (560,270)
-      {id: 5, cx:605, cy:110}, // 45 px right of turn (560,110)
-      {id: 6, cx: 35, cy:305}, // above left turn 1 corner (64 px)
-      {id: 7, cx: 40, cy:145}, // above left turn 2 corner (60 px)
-      {id: 8, cx:555, cy:225}, // beside right turn 2 (44 px from road)
-      {id: 9, cx:555, cy:155}, // beside right turn 4 (44 px from road)
-      {id:10, cx:275, cy: 72}, // left  of top exit x=320 (55 px)
-      {id:11, cx:365, cy: 72}, // right of top exit       (18 px – overlaps V exit)
+      {id: 5, cx:605, cy:118}, // right of turn (560,110) — shifted to clear INN bottom
+      {id: 6, cx: 35, cy:305}, // above left turn 1 corner
+      {id: 7, cx: 40, cy:145}, // above left turn 2 corner
+      {id: 8, cx:207, cy:374}, // below D2 sweep mid-left (avoids right-side trees)
+      {id: 9, cx:320, cy:120}, // above D4 sweep centre (clear of INN & trees)
+      {id:10, cx:275, cy: 72}, // left  of top exit x=320
+      {id:11, cx:365, cy: 72}, // right of top exit
     ],
   },
 
@@ -96,15 +93,14 @@ const MAPS = [
       {x:560,y:380},{x:200,y:380},{x:200,y:180},
       {x:460,y:180},{x:460,y:280},{x:320,y:280},{x:320,y:-20},
     ]],
-    // Every spot is exactly 45 px from its nearest segment
     spots: [
-      {id: 0, cx:365, cy:475}, // right of entry vertical x=320
+      {id: 0, cx:365, cy:448}, // right of entry vertical x=320 (shifted to clear edge)
       {id: 1, cx: 35, cy:405}, // left  of outer vertical x=80  (upper area)
       {id: 2, cx: 35, cy:255}, // left  of outer vertical x=80  (mid)
       {id: 3, cx:125, cy:255}, // right of outer vertical x=80
       {id: 4, cx:275, cy:105}, // below top horizontal y=60 (left)
       {id: 5, cx:440, cy:105}, // below top horizontal y=60 (right)
-      {id: 6, cx:515, cy:220}, // left  of right vertical x=560
+      {id: 6, cx:515, cy:255}, // left  of right vertical x=560 (shifted to clear tree)
       {id: 7, cx:380, cy:335}, // above inner horizontal y=380
       {id: 8, cx:155, cy:280}, // left  of inner vertical x=200
       {id: 9, cx:375, cy:135}, // above inner horizontal y=180
@@ -122,13 +118,13 @@ const MAPS = [
     ],
     // Spots placed 45 px perpendicular to each diagonal / vertical segment
     spots: [
-      {id: 0, cx: 55, cy:410}, // left  of left-entry  x=100
+      {id: 0, cx: 55, cy:330}, // left  of left-entry x=100 (shifted up to clear trees)
       {id: 1, cx:145, cy:410}, // right of left-entry
       {id: 2, cx:266, cy:307}, // right of left diagonal D1  (45 px perp)
       {id: 3, cx:501, cy:178}, // right of left diagonal D2  (45 px perp)
       {id: 4, cx:439, cy:112}, // left  of left diagonal D2  (45 px perp)
-      {id: 5, cx:495, cy:410}, // left  of right-entry x=540
-      {id: 6, cx:585, cy:410}, // right of right-entry
+      {id: 5, cx:495, cy:280}, // left  of right-entry x=540 (shifted up to clear PUB)
+      {id: 6, cx:585, cy:448}, // right of right-entry (shifted down to clear PUB)
       {id: 7, cx:375, cy:307}, // right of right diagonal D1 (45 px perp)
       {id: 8, cx:139, cy:178}, // right of right diagonal D2 (45 px perp)
       {id: 9, cx:201, cy:112}, // left  of right diagonal D2 (45 px perp)
@@ -137,6 +133,43 @@ const MAPS = [
     ],
   },
 ];
+
+// ─── Background obstacle registry ────────────────────────────────────────
+// Used by isSpotBlocked() to prevent build spots from overlapping objects
+// or sitting too close to the canvas border.
+
+const TREE_R = 14;   // visual foliage radius used for collision
+
+// Trees are declared here (shared with render.js drawBackground)
+const BG_TREES = [
+  [172,56],[210,72],[208,42],[88,140],[84,178],[82,220],[236,192],[254,208],[232,220],
+  [540,50],[580,90],[562,142],[568,198],[546,218],[84,354],[83,410],[540,314],[555,364],[560,417],
+  [200,447],[420,452],[440,464],[174,464],[490,464],
+];
+
+// Rectangular permanent objects (x, y, w, h)
+const BG_OBSTACLES = [
+  { x: 10, y: 10, w:132, h: 98 },   // lake + watchtower
+  { x:522, y: 18, w: 90, h: 74 },   // INN building
+  { x:508, y:328, w:102, h: 82 },   // PUB building
+];
+
+// Returns true when a spot centred at (cx,cy) would:
+//   • be too close to the canvas wall  (spot edge within 8 px of border)
+//   • visually overlap a building or the lake
+//   • visually overlap a tree
+function isSpotBlocked(cx, cy) {
+  const r = SPOT_R, wall = 8;
+  if (cx - r < wall || cx + r > CVW - wall) return true;
+  if (cy - r < wall || cy + r > CVH - wall) return true;
+  for (const { x, y, w, h } of BG_OBSTACLES) {
+    if (cx + r > x && cx - r < x + w && cy + r > y && cy - r < y + h) return true;
+  }
+  for (const [tx, ty] of BG_TREES) {
+    if (Math.hypot(cx - tx, cy - ty) < r + TREE_R) return true;
+  }
+  return false;
+}
 
 // ─── Tower definitions ─────────────────────────────────────────────────────
 const TOWER_TYPES = {

@@ -47,10 +47,7 @@ function drawBackground(ctx) {
   _watchtower(ctx,10,10,28,86);
   _well(ctx,374,374);
 
-  const trees=[[172,56],[210,72],[208,42],[88,140],[84,178],[82,220],[236,192],[254,208],[232,220],
-    [540,50],[580,90],[562,142],[568,198],[546,218],[84,354],[83,410],[540,314],[555,364],[560,417],
-    [200,447],[420,452],[440,464],[174,464],[490,464]];
-  trees.forEach(([x,y])=>_tree(ctx,x,y));
+  BG_TREES.forEach(([x,y])=>_tree(ctx,x,y));
 }
 
 // pathArr: waypoint array; roadIdx: used to tint dual roads slightly differently
@@ -125,6 +122,7 @@ function _tree(ctx,x,y) {
 function drawBuildSpots(ctx, spots, selId, moveMode) {
   for (const s of spots) {
     if (s.tower) continue;
+    if (isSpotBlocked(s.cx, s.cy)) continue;   // skip spots that overlap objects / edge
     const hov = s.id === selId;
     const col  = moveMode ? (hov ? "#00ccff" : "#44aaff") : (hov ? "#00ff88" : "#88ff88");
     const bord = moveMode ? (hov ? "#00aaff" : "#2288cc") : (hov ? "#00cc44" : "#44aa44");
