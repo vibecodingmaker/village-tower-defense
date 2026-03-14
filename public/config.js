@@ -37,18 +37,22 @@ const MAPS = [
       {x:320,y:108},{x:320,y:-20},
     ]],
     spots: [
-      {id: 0, cx:275, cy:448}, // left  of entry vertical  x=320
-      {id: 1, cx:365, cy:448}, // right of entry vertical
-      {id: 2, cx:234, cy:393}, // above horizontal y=438
-      {id: 3, cx:103, cy:310}, // left  of vertical x=148 (above tree cluster)
-      {id: 4, cx:180, cy:277}, // above horizontal y=322 (left portion)
-      {id: 5, cx:275, cy:265}, // left  of vertical x=320 (mid)
-      {id: 6, cx:365, cy:265}, // right of vertical x=320 (mid)
-      {id: 7, cx:350, cy:163}, // above horizontal y=208
-      {id: 8, cx:427, cy:253}, // below horizontal y=208
-      {id: 9, cx:517, cy:158}, // right of vertical x=472
-      {id:10, cx:396, cy: 63}, // above horizontal y=108
-      {id:11, cx:450, cy: 63}, // above horizontal y=108 (right portion)
+      {id: 0, cx:496, cy:240},
+      {id: 1, cx:112, cy:304},
+      {id: 2, cx:336, cy:400},
+      {id: 3, cx:208, cy:368},
+      {id: 4, cx:272, cy:368},
+      {id: 5, cx:272, cy: 48},
+      {id: 6, cx:368, cy: 48},
+      {id: 7, cx:272, cy:240},
+      {id: 8, cx:368, cy:272},
+      {id: 9, cx:272, cy:112},
+      {id:10, cx:368, cy:432},
+      {id:11, cx:176, cy:272},
+      {id:12, cx:240, cy:272},
+      {id:13, cx:368, cy:336},
+      {id:14, cx:528, cy:176},
+      {id:15, cx:432, cy: 48},
     ],
   },
 
@@ -60,18 +64,21 @@ const MAPS = [
       [{x:480,y:500},{x:480,y:400},{x:560,y:300},{x:560,y:150},{x:430,y:70},{x:320,y:40},{x:320,y:-20}],
     ],
     spots: [
-      {id: 0, cx:115, cy:450}, // left  of left-entry  x=160
-      {id: 1, cx:205, cy:400}, // right of left-entry (shifted up to clear tree)
-      {id: 2, cx: 35, cy:225}, // left  of left-vertical x=80
-      {id: 3, cx:125, cy:225}, // right of left-vertical
-      {id: 4, cx: 35, cy:148}, // left  of left-vertical top
-      {id: 5, cx:435, cy:400}, // left  of right-entry x=480 (shifted up to clear tree)
-      {id: 6, cx:525, cy:450}, // right of right-entry
-      {id: 7, cx:515, cy:250}, // left  of right-vertical x=560 (shifted down to clear tree)
-      {id: 8, cx:605, cy:225}, // right of right-vertical
-      {id: 9, cx:605, cy:148}, // right of right-vertical top
-      {id:10, cx:220, cy:118}, // below left upper-diagonal
-      {id:11, cx:420, cy:118}, // below right upper-diagonal
+      {id: 0, cx:176, cy:144},
+      {id: 1, cx:464, cy:144},
+      {id: 2, cx:144, cy:304},
+      {id: 3, cx: 48, cy:336},
+      {id: 4, cx:496, cy:304},
+      {id: 5, cx:208, cy:400},
+      {id: 6, cx:432, cy:400},
+      {id: 7, cx:112, cy:432},
+      {id: 8, cx:240, cy:112},
+      {id: 9, cx:400, cy:112},
+      {id:10, cx:176, cy:336},
+      {id:11, cx:464, cy:336},
+      {id:12, cx:496, cy: 48},
+      {id:13, cx:144, cy:176},
+      {id:14, cx:496, cy:176},
     ],
   },
 
@@ -85,18 +92,26 @@ const MAPS = [
       {x:320,y:40},{x:320,y:-20},
     ]],
     spots: [
-      {id: 0, cx:275, cy:448}, // left  of entry x=320
-      {id: 1, cx:365, cy:448}, // right of entry
-      {id: 2, cx: 35, cy:350}, // 45 px left of turn (80,350)
-      {id: 3, cx: 35, cy:190}, // 45 px left of turn (80,190)
-      {id: 4, cx:605, cy:270}, // 45 px right of turn (560,270)
-      {id: 5, cx:605, cy:118}, // right of turn (560,110) — shifted to clear INN bottom
-      {id: 6, cx: 35, cy:305}, // above left turn 1 corner
-      {id: 7, cx: 40, cy:145}, // above left turn 2 corner
-      {id: 8, cx:207, cy:374}, // below D2 sweep mid-left (avoids right-side trees)
-      {id: 9, cx:320, cy:120}, // above D4 sweep centre (clear of INN & trees)
-      {id:10, cx:275, cy: 72}, // left  of top exit x=320
-      {id:11, cx:365, cy: 72}, // right of top exit
+      {id: 0, cx:432, cy:208},
+      {id: 1, cx:304, cy:272},
+      {id: 2, cx:112, cy:304},
+      {id: 3, cx:304, cy:112},
+      {id: 4, cx:496, cy: 48},
+      {id: 5, cx:272, cy:368},
+      {id: 6, cx:592, cy:240},
+      {id: 7, cx:112, cy:240},
+      {id: 8, cx:432, cy:336},
+      {id: 9, cx:368, cy:432},
+      {id:10, cx:272, cy: 48},
+      {id:11, cx:464, cy:176},
+      {id:12, cx:240, cy:112},
+      {id:13, cx:496, cy:208},
+      {id:14, cx:240, cy:272},
+      {id:15, cx:144, cy:432},
+      {id:16, cx:336, cy:368},
+      {id:17, cx:528, cy:176},
+      {id:18, cx:176, cy:112},
+      {id:19, cx:176, cy:272},
     ],
   },
 
@@ -110,18 +125,26 @@ const MAPS = [
       {x:460,y:180},{x:460,y:280},{x:320,y:280},{x:320,y:-20},
     ]],
     spots: [
-      {id: 0, cx:365, cy:448}, // right of entry vertical x=320 (shifted to clear edge)
-      {id: 1, cx: 35, cy:405}, // left  of outer vertical x=80  (upper area)
-      {id: 2, cx: 35, cy:255}, // left  of outer vertical x=80  (mid)
-      {id: 3, cx:125, cy:255}, // right of outer vertical x=80
-      {id: 4, cx:275, cy:105}, // below top horizontal y=60 (left)
-      {id: 5, cx:440, cy:105}, // below top horizontal y=60 (right)
-      {id: 6, cx:515, cy:255}, // left  of right vertical x=560 (shifted to clear tree)
-      {id: 7, cx:380, cy:335}, // above inner horizontal y=380
-      {id: 8, cx:155, cy:280}, // left  of inner vertical x=200
-      {id: 9, cx:375, cy:135}, // above inner horizontal y=180
-      {id:10, cx:415, cy:230}, // left  of inner vertical x=460
-      {id:11, cx:275, cy:280}, // left  of inner horizontal y=280 end
+      {id: 0, cx:368, cy:240},
+      {id: 1, cx:240, cy:272},
+      {id: 2, cx:240, cy:336},
+      {id: 3, cx:176, cy:144},
+      {id: 4, cx:496, cy:304},
+      {id: 5, cx:304, cy:336},
+      {id: 6, cx:368, cy:336},
+      {id: 7, cx:432, cy:336},
+      {id: 8, cx:272, cy:112},
+      {id: 9, cx:368, cy:112},
+      {id:10, cx:272, cy:240},
+      {id:11, cx:144, cy:400},
+      {id:12, cx:368, cy:432},
+      {id:13, cx:208, cy:112},
+      {id:14, cx:432, cy:112},
+      {id:15, cx:496, cy:112},
+      {id:16, cx:464, cy:432},
+      {id:17, cx:272, cy:304},
+      {id:18, cx:144, cy:208},
+      {id:19, cx:144, cy:272},
     ],
   },
 
@@ -132,20 +155,27 @@ const MAPS = [
       [{x:100,y:500},{x:100,y:320},{x:400,y:210},{x:540,y:80},{x:320,y:-20}],
       [{x:540,y:500},{x:540,y:320},{x:240,y:210},{x:100,y:80},{x:320,y:-20}],
     ],
-    // Spots placed 45 px perpendicular to each diagonal / vertical segment
     spots: [
-      {id: 0, cx: 55, cy:330}, // left  of left-entry x=100 (shifted up to clear trees)
-      {id: 1, cx:145, cy:410}, // right of left-entry
-      {id: 2, cx:266, cy:307}, // right of left diagonal D1  (45 px perp)
-      {id: 3, cx:501, cy:178}, // right of left diagonal D2  (45 px perp)
-      {id: 4, cx:439, cy:112}, // left  of left diagonal D2  (45 px perp)
-      {id: 5, cx:495, cy:280}, // left  of right-entry x=540 (shifted up to clear PUB)
-      {id: 6, cx:585, cy:448}, // right of right-entry (shifted down to clear PUB)
-      {id: 7, cx:375, cy:307}, // right of right diagonal D1 (45 px perp)
-      {id: 8, cx:139, cy:178}, // right of right diagonal D2 (45 px perp)
-      {id: 9, cx:201, cy:112}, // left  of right diagonal D2 (45 px perp)
-      {id:10, cx:320, cy:284}, // 45 px below D1/D1 crossing (320,239)
-      {id:11, cx:320, cy:194}, // 45 px above D1/D1 crossing
+      {id: 0, cx:144, cy:176},
+      {id: 1, cx:496, cy:176},
+      {id: 2, cx:112, cy:272},
+      {id: 3, cx:528, cy:272},
+      {id: 4, cx:176, cy:336},
+      {id: 5, cx:464, cy:336},
+      {id: 6, cx:272, cy: 48},
+      {id: 7, cx:368, cy: 48},
+      {id: 8, cx:176, cy:208},
+      {id: 9, cx:464, cy:208},
+      {id:10, cx:272, cy:176},
+      {id:11, cx:368, cy:176},
+      {id:12, cx:144, cy:368},
+      {id:13, cx:144, cy:432},
+      {id:14, cx:272, cy:304},
+      {id:15, cx:368, cy:304},
+      {id:16, cx:432, cy: 80},
+      {id:17, cx:240, cy:144},
+      {id:18, cx:400, cy:144},
+      {id:19, cx:208, cy:112},
     ],
   },
 ];
@@ -248,15 +278,16 @@ function generateWave(n, numPaths) {
     }
   };
 
-  add("goblin",      Math.min(7  + Math.ceil(n * 1.7),  45), 1.4, 1.1);
-  if (n >= 3)  add("skeleton",    Math.min(Math.ceil((n-2)*1.2), 22), 2.0, 1.0);
-  if (n >= 4)  add("orc",         Math.min(Math.ceil((n-3)*0.9), 18), 2.5, 2.0);
-  if (n >= 6)  add("troll",       Math.min(Math.ceil((n-5)*0.6), 12), 3.5, 4.0);
-  if (n >= 7)  add("dragon",      Math.min(Math.ceil((n-6)*0.5), 10), 2.0, 2.5);
-  if (n >= 8)  add("ogre",        Math.min(Math.ceil((n-7)*0.4),  7), 4.0, 5.0);
-  if (n >= 9)  add("harpy",       Math.min(Math.ceil((n-8)*0.6), 12), 1.5, 1.8);
-  if (n >= 12) add("necromancer", Math.min(Math.ceil((n-11)*0.3), 5), 3.0, 6.0);
-  if (n >= 15) add("demon",       Math.min(Math.ceil((n-14)*0.3), 6), 2.5, 3.5);
+  // Wave 1-2: only a few weak goblins; ramp gradually from wave 3+
+  add("goblin",      Math.min(4 + Math.ceil(n * 1.4), 45), 1.8, 1.3);
+  if (n >= 3)  add("skeleton",    Math.min(Math.ceil((n-2)*1.0), 22), 2.2, 1.2);
+  if (n >= 5)  add("orc",         Math.min(Math.ceil((n-4)*0.8), 18), 2.8, 2.2);
+  if (n >= 7)  add("troll",       Math.min(Math.ceil((n-6)*0.55),12), 3.5, 4.0);
+  if (n >= 8)  add("dragon",      Math.min(Math.ceil((n-7)*0.45),10), 2.2, 2.5);
+  if (n >= 9)  add("ogre",        Math.min(Math.ceil((n-8)*0.38), 7), 4.0, 5.0);
+  if (n >= 10) add("harpy",       Math.min(Math.ceil((n-9)*0.55),12), 1.5, 1.8);
+  if (n >= 13) add("necromancer", Math.min(Math.ceil((n-12)*0.3), 5), 3.0, 6.0);
+  if (n >= 16) add("demon",       Math.min(Math.ceil((n-15)*0.3), 6), 2.5, 3.5);
   if (n % 5 === 0) add("boss",    1 + Math.floor(n / 25), 5.0, 8.0);
 
   return q;

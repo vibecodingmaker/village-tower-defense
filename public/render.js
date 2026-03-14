@@ -12,20 +12,21 @@ function drawBackground(ctx) {
   const paths = (typeof G !== "undefined" && G.currentMap) ? G.currentMap.paths : MAPS[0].paths;
 
   // ── 1. Draw grass grid tiles ─────────────────────────────────────────────
-  // Precompute which tiles are "road" so we can skip the grass fill for them
+  // A tile is "road" when its centre is within TILE (32 px) of the path centreline.
+  // Because our waypoints mostly run along tile boundaries, this gives a clean
+  // EXACTLY-2-tile-wide road corridor (one tile on each side of the midline).
   const roadSet = new Set();
   for (const path of paths) {
     for (let i = 0; i < path.length - 1; i++) {
       const ax = path[i].x, ay = path[i].y, bx = path[i+1].x, by = path[i+1].y;
-      // scan a bounding box of tiles around this segment
-      const minC = Math.max(0, Math.floor((Math.min(ax,bx) - ROAD_W) / TILE));
-      const maxC = Math.min(GRID_COLS-1, Math.ceil((Math.max(ax,bx) + ROAD_W) / TILE));
-      const minR = Math.max(0, Math.floor((Math.min(ay,by) - ROAD_W) / TILE));
-      const maxR = Math.min(GRID_ROWS-1, Math.ceil((Math.max(ay,by) + ROAD_W) / TILE));
+      const minC = Math.max(0, Math.floor((Math.min(ax,bx) - TILE * 2) / TILE));
+      const maxC = Math.min(GRID_COLS-1, Math.ceil((Math.max(ax,bx) + TILE * 2) / TILE));
+      const minR = Math.max(0, Math.floor((Math.min(ay,by) - TILE * 2) / TILE));
+      const maxR = Math.min(GRID_ROWS-1, Math.ceil((Math.max(ay,by) + TILE * 2) / TILE));
       for (let row = minR; row <= maxR; row++) {
         for (let col = minC; col <= maxC; col++) {
           const cx = col * TILE + TILE/2, cy = row * TILE + TILE/2;
-          if (ptSegDist(cx, cy, ax, ay, bx, by) < ROAD_W / 2 + TILE * 0.6)
+          if (ptSegDist(cx, cy, ax, ay, bx, by) < TILE)   // ← exactly 2-tile-wide
             roadSet.add(row * GRID_COLS + col);
         }
       }
@@ -49,21 +50,27 @@ function drawBackground(ctx) {
     }
   }
 
-  // ── 2. Draw road tiles ────────────────────────────────────────────────────
+  // ── 2. Draw road tiles — clean, smooth dirt ──────────────────────────────
   for (const key of roadSet) {
     const col = key % GRID_COLS, row = (key / GRID_COLS) | 0;
     const tx = col * TILE, ty = row * TILE;
+    // Base dirt colour
     $r(ctx, tx, ty, TILE, TILE, "#b8845a");
-    $r(ctx, tx+1, ty+1, TILE-2, TILE-2, "#c8956c");
-    // subtle gravel dot
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = "#7a5010";
-    ctx.fillRect(tx + TILE/2 - 2, ty + TILE/2 - 1, 4, 3);
-    ctx.globalAlpha = 1;
+    // Slightly lighter inner face (depth effect)
+    $r(ctx, tx+1, ty+1, TILE-2, TILE-2, "#c99a6a");
   }
 
-  // ── 3. Road centre-line detail (thin line for path clarity) ──────────────
-  paths.forEach((p, i) => _roadDetail(ctx, p, i));
+  // ── 3. Seamless road borders — darken the grass–road edge ────────────────
+  for (const key of roadSet) {
+    const col = key % GRID_COLS, row = (key / GRID_COLS) | 0;
+    const tx = col * TILE, ty = row * TILE;
+    ctx.fillStyle = "rgba(80,45,5,0.22)";
+    // shade edges that border a grass tile
+    if (!roadSet.has((row-1)*GRID_COLS+col)) ctx.fillRect(tx, ty, TILE, 2);
+    if (!roadSet.has((row+1)*GRID_COLS+col)) ctx.fillRect(tx, ty+TILE-2, TILE, 2);
+    if (!roadSet.has(row*GRID_COLS+(col-1))) ctx.fillRect(tx, ty, 2, TILE);
+    if (!roadSet.has(row*GRID_COLS+(col+1))) ctx.fillRect(tx+TILE-2, ty, 2, TILE);
+  }
 
   // ── 4. Static map objects ─────────────────────────────────────────────────
   // Lake (drawn after road tiles so it covers the top-left corner cleanly)
@@ -193,6 +200,98 @@ function drawBuildSpots(ctx, spots, selId, moveMode) {
 }
 
 // Draw the "floating" tower being moved (follows mouse via G.mouseX/Y)
+// ─── Tower selection preview panel ──────────────────────────────────────────
+// Shows name, stats, visual sprite and description when a tower is selected
+// (G.placing is non-null). Drawn in the lower-right corner of the canvas.
+function drawTowerPreview(ctx, type) {
+  const d = TOWER_TYPES[type];
+  if (!d) return;
+
+  const PW = 178, PH = 148;
+  const px = CVW - PW - 10, py = CVH - PH - 28;   // bottom-right, above map label
+
+  // Panel shadow
+  ctx.globalAlpha = 0.18;
+  $r(ctx, px+4, py+4, PW, PH, "#000");
+  ctx.globalAlpha = 1;
+
+  // Panel background
+  $r(ctx, px, py, PW, PH, "#1a2236");
+  ctx.strokeStyle = d.color || "#aaccff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px+1, py+1, PW-2, PH-2);
+
+  // Header bar
+  $r(ctx, px, py, PW, 22, d.color || "#334488");
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 9px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(d.name.toUpperCase(), px + PW/2, py + 14);
+  ctx.textAlign = "left";
+
+  // Tower sprite preview (drawn at 2× scale in a small box)
+  const spriteX = px + 18, spriteY = py + 54;
+  $r(ctx, px+4, py+26, 54, 54, "rgba(0,0,0,0.35)");
+  ctx.save();
+  ctx.translate(spriteX, spriteY);
+  ctx.scale(1.7, 1.7);
+  // Draw a dummy tower object for the sprite function
+  const fn = {
+    cannon:_cannon, archer:_archer, spawner:_barracks,
+    prototype:_prototype, peacemaker:_peacemaker, bonecrusher:_bonecrusher,
+    poison:_poisontower, missiles:_missiles, dagger:_dagger,
+    golden:_golden, blackhole:_blackhole, chrono:_chrono, axe:_axetower,
+  }[type];
+  if (fn) fn(ctx, 0, 0, 0, 0);
+  ctx.restore();
+
+  // Stats column
+  const sx = px + 66, sy = py + 30;
+  ctx.font = "7px monospace";
+
+  const stat = (label, val, col) => {
+    ctx.fillStyle = "#8899bb";
+    ctx.fillText(label, sx, sy + stat._n * 13);
+    ctx.fillStyle = col || "#eef";
+    ctx.fillText(val,   sx + 42, sy + stat._n * 13);
+    stat._n++;
+  };
+  stat._n = 0;
+
+  stat("Cost",    d.cost + "g", "#ffcc44");
+  stat("Range",   d.range + "px", "#88ffcc");
+  if (d.damage > 0)   stat("Dmg",  d.damage, "#ff8888");
+  if (d.fireRate > 0) stat("Rate", d.fireRate.toFixed(1) + "/s", "#ffaa44");
+  if (d.splashR > 0)  stat("Splash", d.splashR + "px", "#ff88ff");
+  if (d.stunDur)      stat("Stun",  d.stunDur + "s", "#aaffff");
+  if (d.poisonDps)    stat("DoT",   d.poisonDps + "/s", "#88ff44");
+  if (d.slowFactor)   stat("Slow",  Math.round((1-d.slowFactor)*100)+"%", "#88ccff");
+  if (d.auraType==="gold")  stat("Gold", "+60%", "#ffdd44");
+  if (d.auraType==="buff")  stat("Buff", "+35%", "#ffcc66");
+  if (d.minWave)      stat("From",  "Wave "+d.minWave, "#ffaa88");
+
+  // Description (word-wrapped)
+  ctx.fillStyle = "#99aacc";
+  ctx.font = "7px monospace";
+  const words = d.desc.split(" ");
+  let line = "", yy = py + PH - 30;
+  for (const w of words) {
+    const test = line ? line + " " + w : w;
+    if (ctx.measureText(test).width > PW - 12) {
+      ctx.fillText(line, px + 6, yy);
+      line = w; yy += 10;
+    } else { line = test; }
+  }
+  ctx.fillText(line, px + 6, yy + 10);
+
+  // "Click ■ to place" hint (dashed border)
+  ctx.strokeStyle = "rgba(200,220,255,0.5)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,3]);
+  ctx.strokeRect(px + 3, py + 3, PW - 6, PH - 6);
+  ctx.setLineDash([]);
+}
+
 function drawMovingTower(ctx, tower, mx, my) {
   if (!tower) return;
   ctx.globalAlpha = 0.72;

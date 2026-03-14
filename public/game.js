@@ -567,6 +567,9 @@ function render() {
   G.parts.forEach(p  => drawParticle(ctx, p));
   G.floats.forEach(f => drawFloat(ctx, f));
 
+  // Tower preview panel — shown while the player is choosing a placement spot
+  if (G.placing) drawTowerPreview(ctx, G.placing);
+
   // Floating tower follows mouse during relocation
   if (G.movingTower) drawMovingTower(ctx, G.movingTower, G.mouseX, G.mouseY);
 
