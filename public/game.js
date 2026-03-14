@@ -57,6 +57,16 @@ const el = {
 };
 
 // ─── Game state ───────────────────────────────────────────────────────────
+// Snap each spot in a map to the nearest tile centre, then copy into live spots array
+function makeSpots(map) {
+  return map.spots.map(s => ({
+    ...s,
+    cx: Math.floor(s.cx / TILE) * TILE + TILE / 2,
+    cy: Math.floor(s.cy / TILE) * TILE + TILE / 2,
+    tower: null,
+  }));
+}
+
 const G = {
   state:      "title",
   gold:       150,
@@ -73,7 +83,7 @@ const G = {
   parts:      [],
   floats:     [],
 
-  spots:      MAPS[0].spots.map(s => ({...s, tower: null})),
+  spots:      makeSpots(MAPS[0]),
 
   selSpot:    null,
   selTower:   null,
@@ -195,8 +205,8 @@ function switchMap() {
   G.mapTier  = (G.mapTier + 1) % MAPS.length;
   G.currentMap = MAPS[G.mapTier];
 
-  // Fresh spots for the new map layout
-  G.spots = G.currentMap.spots.map(s => ({...s, tower: null}));
+  // Fresh spots for the new map layout (snapped to grid tile centres)
+  G.spots = makeSpots(G.currentMap);
 
   const bonusGold  = 100 + G.wave * 5;
   const bonusLives = 2;
@@ -474,7 +484,7 @@ function initGame() {
   G.movingTower = null; G.movingOrigSpot = null;
   G.waveOn = false; G.spawnQ = []; G.spawnT = 0;
   G.mapTier = 0; G.currentMap = MAPS[0]; G.mapBanner = false;
-  G.spots = G.currentMap.spots.map(s => ({...s, tower: null}));
+  G.spots = makeSpots(G.currentMap);
   G.eMod = {speed:1,hp:1,reward:1};
   G.tMod = {rate:1,range:1,cannonDmg:1,dmgMult:1,poisonMult:1};
   el.startBtn.disabled = false;

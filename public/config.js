@@ -4,6 +4,22 @@ const CVW = 640, CVH = 480;
 const ROAD_W = 36;
 const SPOT_R = 22;
 
+// ─── Grid tile system ─────────────────────────────────────────────────────
+const TILE       = 32;               // pixel size of one grid cell
+const GRID_COLS  = CVW / TILE | 0;  // 20 columns
+const GRID_ROWS  = CVH / TILE | 0;  // 15 rows
+
+// Snap an arbitrary pixel coordinate to the nearest tile centre
+function snapToGrid(v) { return (Math.floor(v / TILE) * TILE) + TILE / 2; }
+
+// Minimum distance from point (px,py) to line segment (ax,ay)→(bx,by)
+function ptSegDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  if (dx === 0 && dy === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
 // ─── Map library — 5 maps cycling every 10 waves ──────────────────────────
 // Each map: { id, label, paths[][], spots[] }
 // paths = array of waypoint arrays; multi-element = multiple roads
@@ -154,10 +170,10 @@ const BG_OBSTACLES = [
   { x:508, y:328, w:102, h: 82 },   // PUB building
 ];
 
-// Returns true when a spot centred at (cx,cy) would:
-//   • be too close to the canvas wall  (spot edge within 8 px of border)
-//   • visually overlap a building or the lake
-//   • visually overlap a tree
+// Returns true when a build spot centred at (cx,cy) must be blocked:
+//   • too close to canvas wall
+//   • overlaps a building, lake, or tree
+//   • overlaps a road segment (towers must never stand on the road)
 function isSpotBlocked(cx, cy) {
   const r = SPOT_R, wall = 8;
   if (cx - r < wall || cx + r > CVW - wall) return true;
@@ -167,6 +183,17 @@ function isSpotBlocked(cx, cy) {
   }
   for (const [tx, ty] of BG_TREES) {
     if (Math.hypot(cx - tx, cy - ty) < r + TREE_R) return true;
+  }
+  // Road overlap — prevents towers from standing on the path
+  const paths = (typeof G !== "undefined" && G.currentMap)
+    ? G.currentMap.paths : (typeof MAPS !== "undefined" ? MAPS[0].paths : null);
+  if (paths) {
+    for (const path of paths) {
+      for (let i = 0; i < path.length - 1; i++) {
+        if (ptSegDist(cx, cy, path[i].x, path[i].y, path[i+1].x, path[i+1].y)
+            < ROAD_W / 2 + r) return true;
+      }
+    }
   }
   return false;
 }

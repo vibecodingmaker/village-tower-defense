@@ -9,10 +9,78 @@ const $shade = (hex,a)=>{
 // ─── Background / map ─────────────────────────────────────────────────────
 function drawBackground(ctx) {
   const now = performance.now() * 0.001;
-  $r(ctx, 0, 0, CVW, CVH, "#4a7c3f");
-  ctx.fillStyle = "#3e6e36";
-  [[46,82],[492,142],[82,312],[542,384],[200,448]].forEach(([x,y])=>ctx.fillRect(x,y,32,22));
+  const paths = (typeof G !== "undefined" && G.currentMap) ? G.currentMap.paths : MAPS[0].paths;
 
+  // ── 1. Draw grass grid tiles ─────────────────────────────────────────────
+  // Precompute which tiles are "road" so we can skip the grass fill for them
+  const roadSet = new Set();
+  for (const path of paths) {
+    for (let i = 0; i < path.length - 1; i++) {
+      const ax = path[i].x, ay = path[i].y, bx = path[i+1].x, by = path[i+1].y;
+      // scan a bounding box of tiles around this segment
+      const minC = Math.max(0, Math.floor((Math.min(ax,bx) - ROAD_W) / TILE));
+      const maxC = Math.min(GRID_COLS-1, Math.ceil((Math.max(ax,bx) + ROAD_W) / TILE));
+      const minR = Math.max(0, Math.floor((Math.min(ay,by) - ROAD_W) / TILE));
+      const maxR = Math.min(GRID_ROWS-1, Math.ceil((Math.max(ay,by) + ROAD_W) / TILE));
+      for (let row = minR; row <= maxR; row++) {
+        for (let col = minC; col <= maxC; col++) {
+          const cx = col * TILE + TILE/2, cy = row * TILE + TILE/2;
+          if (ptSegDist(cx, cy, ax, ay, bx, by) < ROAD_W / 2 + TILE * 0.6)
+            roadSet.add(row * GRID_COLS + col);
+        }
+      }
+    }
+  }
+
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col < GRID_COLS; col++) {
+      const tx = col * TILE, ty = row * TILE;
+      if (roadSet.has(row * GRID_COLS + col)) continue;  // road drawn later
+      // Alternating light/dark grass for subtle checkerboard
+      const even = (col + row) % 2 === 0;
+      $r(ctx, tx, ty, TILE, TILE, even ? "#52943a" : "#4d8c36");
+      $r(ctx, tx+1, ty+1, TILE-2, TILE-2, even ? "#5aa040" : "#559939");
+      // Subtle cross marker (like reference image)
+      ctx.globalAlpha = 0.13;
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(tx + TILE/2 - 1, ty + 4, 2, TILE - 8);
+      ctx.fillRect(tx + 4, ty + TILE/2 - 1, TILE - 8, 2);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── 2. Draw road tiles ────────────────────────────────────────────────────
+  for (const key of roadSet) {
+    const col = key % GRID_COLS, row = (key / GRID_COLS) | 0;
+    const tx = col * TILE, ty = row * TILE;
+    $r(ctx, tx, ty, TILE, TILE, "#b8845a");
+    $r(ctx, tx+1, ty+1, TILE-2, TILE-2, "#c8956c");
+    // subtle gravel dot
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#7a5010";
+    ctx.fillRect(tx + TILE/2 - 2, ty + TILE/2 - 1, 4, 3);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── 3. Road centre-line detail (thin line for path clarity) ──────────────
+  paths.forEach((p, i) => _roadDetail(ctx, p, i));
+
+  // ── 4. Static map objects ─────────────────────────────────────────────────
+  // Lake (drawn after road tiles so it covers the top-left corner cleanly)
+  $r(ctx,10,10,122,98,"#1a5a9a"); $r(ctx,12,12,118,94,"#2a7acd");
+  for (let i=0; i<4; i++) {
+    const sx=22+i*22+Math.sin(now*0.9+i*1.2)*4;
+    $r(ctx,sx|0,38+i*12,14,2,"#5599ee");
+  }
+  ctx.fillStyle="#1a4a7a"; ctx.font="7px monospace"; ctx.fillText("~ LAKE ~",30,62);
+
+  _building(ctx,522,18,90,74,"INN","#7a4a18","#cc3333");
+  _building(ctx,508,328,102,82,"PUB","#6a3a10","#aa2222");
+  _watchtower(ctx,10,10,28,86);
+  _well(ctx,374,374);
+  BG_TREES.forEach(([x,y])=>_tree(ctx,x,y));
+
+  // ── 5. Canvas border stones ───────────────────────────────────────────────
   for (const wx of [0, CVW-8]) {
     $r(ctx, wx, 0, 8, CVH, "#777");
     for (let y=0; y<CVH; y+=20) $r(ctx, wx, y, 8, 12, "#aaa");
@@ -24,63 +92,31 @@ function drawBackground(ctx) {
   for (let x=0; x<302; x+=20) $r(ctx,x,CVH-8,12,8,"#aaa");
   for (let x=338; x<CVW; x+=20) $r(ctx,x,CVH-8,12,8,"#aaa");
 
-  $r(ctx,10,10,122,98,"#1a5a9a"); $r(ctx,12,12,118,94,"#2a7acd");
-  for (let i=0; i<4; i++) {
-    const sx=22+i*22+Math.sin(now*0.9+i*1.2)*4;
-    $r(ctx,sx|0,38+i*12,14,2,"#5599ee");
-  }
-  ctx.fillStyle="#1a4a7a"; ctx.font="7px monospace"; ctx.fillText("~ LAKE ~",30,62);
-
-  // Draw all roads for the current map (G may have multiple paths)
-  const paths = (typeof G !== "undefined" && G.currentMap) ? G.currentMap.paths : MAPS[0].paths;
-  paths.forEach((p, i) => drawRoad(ctx, p, i));
-
-  // Map label (bottom-left corner)
+  // ── 6. Map label ──────────────────────────────────────────────────────────
   if (typeof G !== "undefined" && G.currentMap) {
     ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(10, CVH-22, 160, 16);
     ctx.fillStyle = "#aaccff"; ctx.font = "7px monospace";
     ctx.fillText(`🗺 ${G.currentMap.label}  (Map ${G.currentMap.id + 1}/5)`, 14, CVH-10);
   }
-
-  _building(ctx,522,18,90,74,"INN","#7a4a18","#cc3333");
-  _building(ctx,508,328,102,82,"PUB","#6a3a10","#aa2222");
-  _watchtower(ctx,10,10,28,86);
-  _well(ctx,374,374);
-
-  BG_TREES.forEach(([x,y])=>_tree(ctx,x,y));
 }
 
-// pathArr: waypoint array; roadIdx: used to tint dual roads slightly differently
-function drawRoad(ctx, pathArr, roadIdx) {
+// Thin centre-line detail drawn on top of road tiles (replaces the old thick drawRoad)
+function _roadDetail(ctx, pathArr, roadIdx) {
   if (!pathArr || pathArr.length < 2) return;
-  ctx.lineCap="round"; ctx.lineJoin="round";
-
-  // Dual-road tint: second road gets a slightly warmer hue
-  const dirtFill   = roadIdx === 1 ? "#9a6820" : "#8B6014";
-  const centerFill = roadIdx === 1 ? "#d09840" : "#c09030";
-  const shadowCol  = roadIdx === 1 ? "#5a3000" : "#4a2800";
-
-  ctx.strokeStyle=shadowCol; ctx.lineWidth=ROAD_W+6;
-  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
-  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
-
-  ctx.strokeStyle=dirtFill; ctx.lineWidth=ROAD_W;
-  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
-  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
-
-  ctx.strokeStyle=centerFill; ctx.lineWidth=ROAD_W-14;
-  ctx.beginPath(); ctx.moveTo(pathArr[0].x, pathArr[0].y);
-  pathArr.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
-
-  // Small pebbles near centre of path
-  ctx.fillStyle="#7a5010";
-  for (let i = 1; i < pathArr.length; i++) {
-    const ax=pathArr[i-1].x, ay=pathArr[i-1].y;
-    const bx=pathArr[i].x,   by=pathArr[i].y;
-    const mx=(ax+bx)/2|0, my=(ay+by)/2|0;
-    ctx.fillRect(mx-2, my-1, 4, 3);
-  }
+  const col = roadIdx === 1 ? "rgba(90,48,0,0.35)" : "rgba(74,40,0,0.35)";
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.setLineDash([8, 12]);
+  ctx.beginPath();
+  ctx.moveTo(pathArr[0].x, pathArr[0].y);
+  pathArr.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
 }
+
 
 function _building(ctx,x,y,w,h,label,wall,roof) {
   const wy=y+(h*0.34)|0;
@@ -117,28 +153,42 @@ function _tree(ctx,x,y) {
   $r(ctx,x-8,y-30,6,4,"#55cc55"); $r(ctx,x-4,y-36,4,4,"#55cc55");
 }
 
-// ─── Build spots ──────────────────────────────────────────────────────────
-// moveMode: true when a tower is being relocated — open spots glow blue
+// ─── Build spots (grid-cell style, matching the reference image) ──────────
 function drawBuildSpots(ctx, spots, selId, moveMode) {
   for (const s of spots) {
     if (s.tower) continue;
-    if (isSpotBlocked(s.cx, s.cy)) continue;   // skip spots that overlap objects / edge
+    if (isSpotBlocked(s.cx, s.cy)) continue;
     const hov = s.id === selId;
-    const col  = moveMode ? (hov ? "#00ccff" : "#44aaff") : (hov ? "#00ff88" : "#88ff88");
-    const bord = moveMode ? (hov ? "#00aaff" : "#2288cc") : (hov ? "#00cc44" : "#44aa44");
-    ctx.globalAlpha = hov ? 0.82 : 0.55;
-    $r(ctx,s.cx-SPOT_R,s.cy-SPOT_R,SPOT_R*2,SPOT_R*2,col);
-    ctx.globalAlpha=1;
-    ctx.strokeStyle=bord; ctx.lineWidth=2;
-    ctx.strokeRect(s.cx-SPOT_R,s.cy-SPOT_R,SPOT_R*2,SPOT_R*2);
-    $r(ctx,s.cx-1,s.cy-7,2,14,bord);
-    $r(ctx,s.cx-7,s.cy-1,14,2,bord);
-    if (moveMode) {
-      // "Place here" arrow
-      ctx.fillStyle=bord; ctx.font="10px monospace"; ctx.textAlign="center";
-      ctx.fillText("↓", s.cx, s.cy+4);
-      ctx.textAlign="left";
+
+    // Snap to tile top-left corner
+    const tx = Math.floor(s.cx / TILE) * TILE;
+    const ty = Math.floor(s.cy / TILE) * TILE;
+    const cx = tx + TILE / 2;
+    const cy = ty + TILE / 2;
+
+    if (hov) {
+      // Highlighted tile (selected or hover)
+      ctx.globalAlpha = 0.88;
+      $r(ctx, tx, ty, TILE, TILE, moveMode ? "#6699ff" : "#77ee99");
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = moveMode ? "#3366ff" : "#00cc55";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(tx + 1.5, ty + 1.5, TILE - 3, TILE - 3);
+    } else {
+      // Normal empty build slot — white semi-transparent square (reference image style)
+      ctx.globalAlpha = 0.62;
+      $r(ctx, tx, ty, TILE, TILE, "#ffffff");
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(tx + 1, ty + 1, TILE - 2, TILE - 2);
     }
+
+    // + icon centred in tile
+    const arm = 7;
+    const ic = hov ? (moveMode ? "#2255dd" : "#007733") : "rgba(180,220,180,0.95)";
+    $r(ctx, cx - 1, cy - arm, 2, arm * 2, ic);
+    $r(ctx, cx - arm, cy - 1, arm * 2, 2, ic);
   }
 }
 
@@ -398,132 +448,295 @@ function drawEnemy(ctx, e) {
   }
 }
 
+// ── Shared helpers for cartoonish enemy rendering ────────────────────────────
+function _shadow(ctx,ex,ey,w) {
+  ctx.globalAlpha=0.22; ctx.fillStyle="#000";
+  ctx.beginPath(); ctx.ellipse(ex,ey+2,w*0.8,3,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+}
+function _circle(ctx,x,y,r,c){ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); }
+function _eye(ctx,x,y,r,iris){ _circle(ctx,x,y,r,"#fff"); _circle(ctx,x,y,r*0.5,iris); _circle(ctx,x,y,r*0.2,"#111"); }
+
 // ── Classic enemies ─────────────────────────────────────────────────────────
 function _goblin(ctx,ex,ey,s,t) {
-  $r(ctx,ex-s+2,ey-s+2,s*2-4,s*2-2,"#1a8a1a");
-  $r(ctx,ex-s+1,ey-s*2+2,s*2-2,s+4,"#33bb33");
-  $r(ctx,ex-s-2,ey-s*2+3,4,6,"#22aa22"); $r(ctx,ex+s-2,ey-s*2+3,4,6,"#22aa22");
-  $r(ctx,ex-4,ey-s*2+4,3,3,"#ff3300"); $r(ctx,ex+1,ey-s*2+4,3,3,"#ff3300");
-  $r(ctx,ex-1,ey-s*2+7,2,2,"#118811");
-  $r(ctx,ex+s-2,ey-s*2+2,2,s*2+2,"#888"); $r(ctx,ex+s-4,ey-s*2+2,4,3,"#888");
+  const walk=(Math.sin(t*9)*3)|0;
+  _shadow(ctx,ex,ey,s);
+  // Body
+  ctx.fillStyle="#2cb82c"; ctx.beginPath(); ctx.roundRect(ex-s+2,ey-s+2,s*2-4,s*2-2,4); ctx.fill();
+  // Arms (swing)
+  $r(ctx,ex-s-2,ey-s+4+walk,4,7,"#22aa22"); $r(ctx,ex+s-2,ey-s+4-walk,4,7,"#22aa22");
+  // Legs
+  $r(ctx,ex-s+4,ey+2,5,7,"#22aa22"); $r(ctx,ex+s-9,ey+2+Math.abs(walk)-2,5,7,"#22aa22");
+  // Head (round)
+  _circle(ctx,ex,ey-s*2+3,s*1.05,"#33cc33");
+  // Ears
+  _circle(ctx,ex-s+1,ey-s*2+2,s*0.45,"#22aa22");
+  _circle(ctx,ex+s-1,ey-s*2+2,s*0.45,"#22aa22");
+  // Eyes
+  _eye(ctx,ex-3,ey-s*2+2,3,"#cc2200"); _eye(ctx,ex+3,ey-s*2+2,3,"#cc2200");
+  // Mouth / teeth
+  ctx.fillStyle="#111"; ctx.fillRect(ex-4,ey-s*2+7,8,3);
+  ctx.fillStyle="#fff"; for(let i=0;i<3;i++) ctx.fillRect(ex-3+i*3,ey-s*2+7,2,3);
+  // Tiny sword
+  $r(ctx,ex+s,ey-s*2-1,2,s*2+4,"#aaa"); $r(ctx,ex+s-3,ey-s*2,8,2,"#888");
 }
+
 function _skeleton(ctx,ex,ey,s,t) {
-  // Pale bone-white skeleton warrior
-  $r(ctx,ex-s+2,ey-s+2,s*2-4,s*2-2,"#ccccaa");
-  $r(ctx,ex-s+2,ey-s*2+3,s*2-4,s+2,"#ddddbb");
-  $r(ctx,ex-3,ey-s*2+2,2,4,"#000"); $r(ctx,ex+1,ey-s*2+2,2,4,"#000"); // eye sockets
-  $r(ctx,ex-4,ey-s*2+7,8,2,"#ccccaa"); // jaw
-  for(let i=0;i<3;i++) $r(ctx,ex-3+i*3,ey-s*2+9,2,2,"#aaaaaa"); // teeth
-  // Rib lines on body
-  for(let i=0;i<3;i++) $r(ctx,ex-s+3,ey-s+2+i*4,s*2-6,1,"#bbbbaa");
-  $r(ctx,ex+s-2,ey-s*2,3,s*3,"#ccccaa"); // bone weapon
+  const walk=(Math.sin(t*8)*4)|0;
+  _shadow(ctx,ex,ey,s);
+  // Body (ribcage)
+  ctx.fillStyle="#d8d4c4";
+  ctx.beginPath(); ctx.roundRect(ex-s+2,ey-s+3,s*2-4,s*2-4,3); ctx.fill();
+  // Rib lines
+  ctx.fillStyle="rgba(0,0,0,0.18)";
+  for(let i=0;i<3;i++) ctx.fillRect(ex-s+4,ey-s+6+i*5,s*2-8,2);
+  // Arms
+  $r(ctx,ex-s-2,ey-s+4+walk,4,8,"#d8d4c4"); $r(ctx,ex+s-2,ey-s+4-walk,4,8,"#d8d4c4");
+  // Legs
+  $r(ctx,ex-s+4,ey+2,4,7,"#d8d4c4"); $r(ctx,ex+s-8,ey+2+Math.abs(walk)-2,4,7,"#d8d4c4");
+  // Skull (large, round)
+  _circle(ctx,ex,ey-s*2+2,s*1.1,"#e8e4d4");
+  // Eye sockets (dark filled circles — classic skull look)
+  _circle(ctx,ex-s*0.38,ey-s*2,s*0.32,"#1a1a2a");
+  _circle(ctx,ex+s*0.38,ey-s*2,s*0.32,"#1a1a2a");
+  // Nose cavity
+  ctx.fillStyle="#555"; ctx.fillRect(ex-1,ey-s*2+4,2,2);
+  // Teeth
+  ctx.fillStyle="#d8d4c4"; ctx.fillRect(ex-4,ey-s*2+6,8,3);
+  ctx.fillStyle="#fff"; for(let i=0;i<3;i++) ctx.fillRect(ex-3+i*3,ey-s*2+7,2,2);
+  // Bone weapon
+  $r(ctx,ex+s,ey-s*2-3,3,s*3+4,"#d8d4c4");
+  $r(ctx,ex+s-4,ey-s*2-3,11,3,"#d8d4c4"); $r(ctx,ex+s-4,ey-s+2,11,3,"#d8d4c4");
 }
+
 function _orc(ctx,ex,ey,s,t) {
-  $r(ctx,ex-s,ey-s+2,s*2,s*2+2,"#7a4200"); $r(ctx,ex-s+1,ey-s*2+1,s*2-2,s*2,"#aa5800");
-  const eo=(Math.sin(t*2.5)*3)|0;
-  $r(ctx,ex-5+eo,ey-s*2+4,4,4,"#ffee00"); $r(ctx,ex+2-eo,ey-s*2+4,4,4,"#ffee00");
-  $r(ctx,ex-4+eo,ey-s*2+5,2,2,"#330000"); $r(ctx,ex+3-eo,ey-s*2+5,2,2,"#330000");
-  $r(ctx,ex-3,ey-s*2+s+1,2,4,"#eeddaa"); $r(ctx,ex+1,ey-s*2+s+1,2,4,"#eeddaa");
-  $r(ctx,ex+s-2,ey-s*2,5,s*3+4,"#5a3000"); $r(ctx,ex+s-4,ey-s*2-2,9,7,"#7a5000");
+  const eo=(Math.sin(t*2.5)*4)|0;
+  _shadow(ctx,ex,ey,s+2);
+  // Body (wider)
+  ctx.fillStyle="#8a4400";
+  ctx.beginPath(); ctx.roundRect(ex-s-1,ey-s+2,s*2+4,s*2+3,5); ctx.fill();
+  // Arms (sway like drunk)
+  $r(ctx,ex-s-4,ey-s+3+eo,5,9,"#7a3a00"); $r(ctx,ex+s-1,ey-s+3-eo,5,9,"#7a3a00");
+  // Legs
+  $r(ctx,ex-s+3,ey+3,6,8,"#6a3000"); $r(ctx,ex+s-9,ey+3+eo,6,8,"#6a3000");
+  // Head (round)
+  _circle(ctx,ex,ey-s*2+2,s*1.1,"#aa5500");
+  // Eyes (bulging yellow)
+  _eye(ctx,ex-s*0.4+eo,ey-s*2,s*0.32,"#ffcc00");
+  _eye(ctx,ex+s*0.4-eo,ey-s*2,s*0.32,"#ffcc00");
+  // Tusks
+  ctx.fillStyle="#ffe0aa"; ctx.fillRect(ex-5,ey-s*2+7,3,5); ctx.fillRect(ex+2,ey-s*2+7,3,5);
+  // Axe
+  $r(ctx,ex+s+2,ey-s*2-4,4,s*3+6,"#5a3000"); $r(ctx,ex+s,ey-s*2-8,12,8,"#8B5500");
 }
+
 function _troll(ctx,ex,ey,s,t) {
-  $r(ctx,ex-s,ey-s+2,s*2+2,s*2+6,"#445500"); $r(ctx,ex-s,ey-s*2,s*2+2,s*2+2,"#667700");
-  $r(ctx,ex-5,ey-s*2+4,4,3,"#ff2200"); $r(ctx,ex+1,ey-s*2+4,4,3,"#ff2200");
-  $r(ctx,ex-6,ey-s*2+2,6,2,"#334400"); $r(ctx,ex+1,ey-s*2+2,6,2,"#334400");
-  $r(ctx,ex-3,ey-s*2+8,6,5,"#556600");
-  const fi=(Math.sin(t*6)*2)|0;
-  $r(ctx,ex-s-4,ey+fi,7,7,"#556600"); $r(ctx,ex+s-3,ey-fi,7,7,"#556600");
+  const fi=(Math.sin(t*6)*3)|0;
+  _shadow(ctx,ex,ey,s+3);
+  // Huge body
+  ctx.fillStyle="#3a5500";
+  ctx.beginPath(); ctx.roundRect(ex-s-2,ey-s+2,s*2+6,s*2+7,6); ctx.fill();
+  // Fists
+  _circle(ctx,ex-s-4,ey+fi,s*0.55,"#2a4400");
+  _circle(ctx,ex+s+4,ey-fi,s*0.55,"#2a4400");
+  // Big round head
+  _circle(ctx,ex,ey-s*2+1,s*1.2,"#4a6a00");
+  // Eyes (angry red)
+  _eye(ctx,ex-s*0.4,ey-s*2-2,s*0.33,"#ff2200");
+  _eye(ctx,ex+s*0.4,ey-s*2-2,s*0.33,"#ff2200");
+  // Uni-brow ridge
+  ctx.fillStyle="#2a4000"; ctx.fillRect(ex-s*0.65,ey-s*2-5,s*1.3,3);
+  // Mouth (scowl)
+  ctx.strokeStyle="#1a2a00"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(ex,ey-s*2+5,5,0.2,Math.PI-0.2); ctx.stroke();
+  // Club
+  $r(ctx,ex+s+2,ey-s*2,6,s*3,"#4a3000"); _circle(ctx,ex+s+5,ey-s*2,8,"#5a4000");
 }
+
 function _dragon(ctx,ex,ey,s,t) {
-  const fl=(Math.sin(t*14)*5)|0;
-  ctx.fillStyle="#881100";
+  const fl=(Math.sin(t*14)*6)|0;
+  _shadow(ctx,ex,ey,s+2);
+  // Wings
+  ctx.fillStyle="#991100";
   ctx.beginPath(); ctx.moveTo(ex-s+2,ey-s+4); ctx.lineTo(ex-s*3+2,ey-s+fl); ctx.lineTo(ex-s+2,ey-2); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s+4); ctx.lineTo(ex+s*3-2,ey-s+fl); ctx.lineTo(ex+s-2,ey-2); ctx.closePath(); ctx.fill();
-  $r(ctx,ex-s+2,ey-s+2,s*2-4,s*2-2,"#cc2200");
-  $r(ctx,ex-s+3,ey-s*2+4,s*2-6,s+4,"#ff3300");
-  $r(ctx,ex-2,ey-s*2+6,4,4,"#ffff00"); $r(ctx,ex-1,ey-s*2+7,2,2,"#222");
-  if((t*5|0)%7===0){ $r(ctx,ex+s-4,ey-s*2+8,8,3,"#ff8800"); $r(ctx,ex+s,ey-s*2+9,5,2,"#ffcc00"); }
-  $r(ctx,ex-s-4,ey+2,6,3,"#991100"); $r(ctx,ex-s-7,ey+4,4,2,"#991100");
+  // Body (scaly)
+  ctx.fillStyle="#cc2200";
+  ctx.beginPath(); ctx.roundRect(ex-s+2,ey-s+2,s*2-4,s*2-2,5); ctx.fill();
+  // Head
+  _circle(ctx,ex,ey-s*2+3,s*1.0,"#dd3300");
+  // Eyes (glowing yellow)
+  _eye(ctx,ex-s*0.4,ey-s*2+1,s*0.28,"#ffee00");
+  _eye(ctx,ex+s*0.4,ey-s*2+1,s*0.28,"#ffee00");
+  // Fire breath (animated)
+  if((t*5|0)%6===0){
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle="#ff8800";
+    ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s*2+4); ctx.lineTo(ex+s+12,ey-s*2+1); ctx.lineTo(ex+s+8,ey-s*2+8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#ffff00";
+    ctx.beginPath(); ctx.moveTo(ex+s,ey-s*2+4); ctx.lineTo(ex+s+8,ey-s*2+3); ctx.lineTo(ex+s+6,ey-s*2+7); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  // Tail
+  $r(ctx,ex-s-4,ey+2,7,3,"#991100"); $r(ctx,ex-s-8,ey+4,5,2,"#991100");
 }
 
 // ── New enemies ─────────────────────────────────────────────────────────────
 function _ogre(ctx,ex,ey,s,t) {
-  // Huge mossy green brute
-  $r(ctx,ex-s-2,ey-s+2,s*2+6,s*2+8,"#2a5500"); // massive body
-  $r(ctx,ex-s-1,ey-s*2-2,s*2+4,s*2+6,"#336611"); // head
-  $r(ctx,ex-6,ey-s*2+3,5,5,"#ff4400"); $r(ctx,ex+1,ey-s*2+3,5,5,"#ff4400"); // eyes
-  $r(ctx,ex-4,ey-s*2+10,8,3,"#224400"); // scowl
+  _shadow(ctx,ex,ey,s+3);
+  // Massive body (mossy green)
+  ctx.fillStyle="#2a5500";
+  ctx.beginPath(); ctx.roundRect(ex-s-3,ey-s+1,s*2+8,s*2+9,7); ctx.fill();
+  // Arms (thick)
+  $r(ctx,ex-s-6,ey-s+3,7,10,"#224400"); $r(ctx,ex+s-1,ey-s+3,7,10,"#224400");
+  // Legs
+  $r(ctx,ex-s+3,ey+4,7,10,"#1a3800"); $r(ctx,ex+s-10,ey+4,7,10,"#1a3800");
+  // Big round head
+  _circle(ctx,ex,ey-s*2,s*1.25,"#336611");
+  // Eyes (red)
+  _eye(ctx,ex-s*0.45,ey-s*2-3,s*0.35,"#ff4400");
+  _eye(ctx,ex+s*0.45,ey-s*2-3,s*0.35,"#ff4400");
+  // Brow ridge
+  ctx.fillStyle="#224400"; ctx.fillRect(ex-s*0.75,ey-s*2-7,s*1.5,4);
+  // Nose (bulbous)
+  _circle(ctx,ex,ey-s*2+4,s*0.28,"#285500");
   // Club
-  $r(ctx,ex+s+2,ey-s*2-4,8,s*4+8,"#7a4400"); $r(ctx,ex+s,ey-s*2-8,12,8,"#8B5500");
-  // Club spikes
-  for(let i=0;i<3;i++) $r(ctx,ex+s-1+i*4,ey-s*2-10,3,4,"#cc7700");
+  $r(ctx,ex+s+3,ey-s*2-6,8,s*4+10,"#7a4400");
+  _circle(ctx,ex+s+7,ey-s*2-6,10,"#8B5500");
+  for(let i=0;i<3;i++) { ctx.fillStyle="#cc7700"; ctx.beginPath(); ctx.moveTo(ex+s-1+i*5,ey-s*2-16); ctx.lineTo(ex+s+2+i*5,ey-s*2-10); ctx.lineTo(ex+s+5+i*5,ey-s*2-16); ctx.closePath(); ctx.fill(); }
 }
+
 function _harpy(ctx,ex,ey,s,t) {
-  const fw=(Math.sin(t*14)*8)|0;
-  ctx.fillStyle="#7733aa";
+  const fw=(Math.sin(t*14)*9)|0;
+  _shadow(ctx,ex,ey,s+1);
   // Wings
-  ctx.beginPath(); ctx.moveTo(ex-s+2,ey-s+2); ctx.lineTo(ex-s*3,ey-s-6+fw); ctx.lineTo(ex-s+2,ey+4); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s+2); ctx.lineTo(ex+s*3,ey-s-6+fw); ctx.lineTo(ex+s-2,ey+4); ctx.closePath(); ctx.fill();
-  $r(ctx,ex-s+2,ey-s,s*2-4,s*2,"#9944aa"); // body
-  $r(ctx,ex-s+3,ey-s*2+2,s*2-6,s+2,"#bb55cc"); // head
-  $r(ctx,ex-3,ey-s*2+4,3,3,"#ffff00"); $r(ctx,ex+1,ey-s*2+4,3,3,"#ffff00"); // eyes
-  $r(ctx,ex-2,ey-s*2+8,4,3,"#ff8800"); // beak
+  ctx.fillStyle="#6622aa";
+  ctx.beginPath(); ctx.moveTo(ex-s+2,ey-s+2); ctx.lineTo(ex-s*3,ey-s-8+fw); ctx.lineTo(ex-s+2,ey+4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s+2); ctx.lineTo(ex+s*3,ey-s-8+fw); ctx.lineTo(ex+s-2,ey+4); ctx.closePath(); ctx.fill();
+  // Wing highlight
+  ctx.fillStyle="#9944cc"; ctx.globalAlpha=0.5;
+  ctx.beginPath(); ctx.moveTo(ex-s+3,ey-s+3); ctx.lineTo(ex-s*2.5,ey-s-4+fw); ctx.lineTo(ex-s+3,ey); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ex+s-3,ey-s+3); ctx.lineTo(ex+s*2.5,ey-s-4+fw); ctx.lineTo(ex+s-3,ey); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+  // Body
+  ctx.fillStyle="#7733aa";
+  ctx.beginPath(); ctx.roundRect(ex-s+2,ey-s,s*2-4,s*2,4); ctx.fill();
+  // Head
+  _circle(ctx,ex,ey-s*2+3,s*0.95,"#9944aa");
+  // Eyes
+  _eye(ctx,ex-s*0.38,ey-s*2+1,s*0.28,"#ffff00");
+  _eye(ctx,ex+s*0.38,ey-s*2+1,s*0.28,"#ffff00");
+  // Beak
+  ctx.fillStyle="#ff9900"; ctx.beginPath(); ctx.moveTo(ex-3,ey-s*2+6); ctx.lineTo(ex+3,ey-s*2+6); ctx.lineTo(ex,ey-s*2+11); ctx.closePath(); ctx.fill();
 }
+
 function _necromancer(ctx,ex,ey,s,t) {
-  // Dark robed caster with staff
-  $r(ctx,ex-s+1,ey-s+3,s*2-2,s*2-1,"#220033"); // robe
-  $r(ctx,ex-s+2,ey-s*2+2,s*2-4,s+4,"#330044"); // head
-  $r(ctx,ex-4,ey-s*2+4,3,4,"#ff0000"); $r(ctx,ex+1,ey-s*2+4,3,4,"#ff0000"); // glowing eyes
-  $r(ctx,ex-3,ey-s*2,6,3,"#220033"); // hood
+  _shadow(ctx,ex,ey,s);
+  // Robe (dark purple)
+  ctx.fillStyle="#1a0033";
+  ctx.beginPath(); ctx.moveTo(ex-s+1,ey+2); ctx.lineTo(ex-s+2,ey-s+3); ctx.lineTo(ex+s-2,ey-s+3); ctx.lineTo(ex+s-1,ey+2); ctx.closePath(); ctx.fill();
+  // Robe hem glow
+  ctx.strokeStyle="rgba(170,0,255,0.45)"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(ex-s+1,ey+2); ctx.lineTo(ex+s-1,ey+2); ctx.stroke();
+  // Head / hood
+  _circle(ctx,ex,ey-s*2+2,s*0.95,"#2a0044");
+  // Glowing eyes
+  ctx.shadowColor="#ff0055"; ctx.shadowBlur=8;
+  _circle(ctx,ex-s*0.37,ey-s*2,s*0.27,"#ff0055");
+  _circle(ctx,ex+s*0.37,ey-s*2,s*0.27,"#ff0055");
+  ctx.shadowBlur=0;
+  // Hood tip
+  ctx.fillStyle="#1a0033";
+  ctx.beginPath(); ctx.moveTo(ex-s*0.7,ey-s*2-5); ctx.lineTo(ex,ey-s*3+2); ctx.lineTo(ex+s*0.7,ey-s*2-5); ctx.closePath(); ctx.fill();
   // Staff
-  $r(ctx,ex+s,ey-s*2-8,3,s*3+10,"#553366");
-  ctx.fillStyle="#aa00ff";
-  ctx.beginPath(); ctx.arc(ex+s+1, ey-s*2-8, 5+Math.sin(t*4)*2, 0, Math.PI*2); ctx.fill();
-  // Pulsing orb
-  ctx.globalAlpha=0.4+Math.sin(t*3)*0.3;
-  ctx.fillStyle="#cc00ff";
-  ctx.beginPath(); ctx.arc(ex+s+1, ey-s*2-8, 8, 0, Math.PI*2); ctx.fill();
+  $r(ctx,ex+s,ey-s*2-10,3,s*3+12,"#4a2066");
+  const pr=5+Math.sin(t*4)*2;
+  ctx.shadowColor="#bb00ff"; ctx.shadowBlur=10;
+  _circle(ctx,ex+s+1,ey-s*2-10,pr,"#aa00ff");
+  ctx.shadowBlur=0;
+  ctx.globalAlpha=0.35+Math.sin(t*3)*0.25;
+  _circle(ctx,ex+s+1,ey-s*2-10,pr+5,"#cc00ff");
   ctx.globalAlpha=1;
 }
+
 function _demon(ctx,ex,ey,s,t) {
-  const fw=(Math.sin(t*12)*6)|0;
-  ctx.fillStyle="#880011";
+  const fw=(Math.sin(t*12)*7)|0;
+  _shadow(ctx,ex,ey,s+2);
   // Bat wings
+  ctx.fillStyle="#770011";
   ctx.beginPath(); ctx.moveTo(ex-s+2,ey-s+2); ctx.lineTo(ex-s*4,ey-s*2+fw); ctx.lineTo(ex-s,ey+2); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s+2); ctx.lineTo(ex+s*4,ey-s*2+fw); ctx.lineTo(ex+s,ey+2); ctx.closePath(); ctx.fill();
-  $r(ctx,ex-s+2,ey-s+1,s*2-4,s*2-1,"#aa0033"); // body
-  $r(ctx,ex-s+2,ey-s*2+1,s*2-4,s+4,"#cc0044"); // head
-  $r(ctx,ex-4,ey-s*2+3,4,5,"#ffff00"); $r(ctx,ex+1,ey-s*2+3,4,5,"#ffff00"); // demon eyes
-  $r(ctx,ex-2,ey-s*2-2,4,4,"#aa0000"); // horns left
-  $r(ctx,ex-6,ey-s*2-4,3,5,"#880000"); $r(ctx,ex+3,ey-s*2-4,3,5,"#880000");
-  if((t*4|0)%5===0){ $r(ctx,ex-s*2,ey-s*2,s*4,3,"#ff4400"); } // fire breath
+  // Wing membrane highlight
+  ctx.fillStyle="rgba(200,0,50,0.35)";
+  ctx.beginPath(); ctx.moveTo(ex-s+2,ey-s+3); ctx.lineTo(ex-s*3.5,ey-s*2+fw); ctx.lineTo(ex-s,ey+1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ex+s-2,ey-s+3); ctx.lineTo(ex+s*3.5,ey-s*2+fw); ctx.lineTo(ex+s,ey+1); ctx.closePath(); ctx.fill();
+  // Body
+  ctx.fillStyle="#aa0033";
+  ctx.beginPath(); ctx.roundRect(ex-s+2,ey-s+1,s*2-4,s*2-1,5); ctx.fill();
+  // Head
+  _circle(ctx,ex,ey-s*2+2,s*1.0,"#cc0033");
+  // Horns
+  ctx.fillStyle="#440000";
+  ctx.beginPath(); ctx.moveTo(ex-s*0.5,ey-s*2-3); ctx.lineTo(ex-s*0.3,ey-s*3+2); ctx.lineTo(ex-s*0.1,ey-s*2-3); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ex+s*0.1,ey-s*2-3); ctx.lineTo(ex+s*0.3,ey-s*3+2); ctx.lineTo(ex+s*0.5,ey-s*2-3); ctx.closePath(); ctx.fill();
+  // Eyes (glowing)
+  ctx.shadowColor="#ff2200"; ctx.shadowBlur=6;
+  _eye(ctx,ex-s*0.38,ey-s*2+1,s*0.29,"#ff4400");
+  _eye(ctx,ex+s*0.38,ey-s*2+1,s*0.29,"#ff4400");
+  ctx.shadowBlur=0;
+  // Claws
+  $r(ctx,ex-s-2,ey+2,5,4,"#880022"); $r(ctx,ex+s-3,ey+2,5,4,"#880022");
+  // Tail
+  ctx.strokeStyle="#770011"; ctx.lineWidth=3; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(ex-s,ey+4); ctx.quadraticCurveTo(ex-s-8,ey+12,ex-s-6,ey+18); ctx.stroke();
 }
-function _boss(ctx,ex,ey,s,t) {
-  // Massive dark overlord
-  const pulse=1+Math.sin(t*3)*0.1;
-  ctx.globalAlpha=0.6;
-  $r(ctx,ex-s-4,ey-s*2-4,(s+4)*2,s*4+8,"#440000"); // dark glow
-  ctx.globalAlpha=1;
 
-  $r(ctx,ex-s-2,ey-s+1,s*2+6,s*2+8,"#330000"); // body
-  $r(ctx,ex-s-1,ey-s*2-4,s*2+4,s*2+8,"#550000"); // head
-  // Crown
-  for(let i=0;i<5;i++) $r(ctx,ex-s+i*8,ey-s*2-10,5,8,"#882200");
-  $r(ctx,ex-s-2,ey-s*2-4,s*2+6,4,"#660000");
-  // Eyes: glowing red
-  $r(ctx,ex-6,ey-s*2+2,6,6,"#ff0000"); $r(ctx,ex+1,ey-s*2+2,6,6,"#ff0000");
-  ctx.fillStyle="#ffff00";
-  ctx.fillRect(ex-5,ey-s*2+3,4,4); ctx.fillRect(ex+2,ey-s*2+3,4,4);
+function _boss(ctx,ex,ey,s,t) {
+  const pulse = Math.sin(t * 3) * 0.12;
+  _shadow(ctx, ex, ey, s + 5);
+
+  // Pulsing dark aura
+  ctx.globalAlpha = 0.28 + Math.abs(pulse);
+  ctx.fillStyle = "#ff0000";
+  ctx.beginPath(); ctx.arc(ex, ey - s, s * 2.8, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Body (massive, armoured)
+  ctx.fillStyle = "#330000";
+  ctx.beginPath(); ctx.roundRect(ex - s - 3, ey - s + 1, s * 2 + 8, s * 2 + 9, 7); ctx.fill();
   // Shoulder spikes
-  for(let i=0;i<3;i++){
-    $r(ctx,ex-s-4,ey-s+i*6,6,4,"#660000");
-    $r(ctx,ex+s-2,ey-s+i*6,6,4,"#660000");
+  for(let i = 0; i < 3; i++) {
+    ctx.fillStyle = "#660000";
+    ctx.beginPath(); ctx.moveTo(ex-s-3,ey-s+i*8); ctx.lineTo(ex-s-10,ey-s-3+i*8); ctx.lineTo(ex-s-3,ey-s+6+i*8); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex+s+3,ey-s+i*8); ctx.lineTo(ex+s+10,ey-s-3+i*8); ctx.lineTo(ex+s+3,ey-s+6+i*8); ctx.closePath(); ctx.fill();
   }
-  // Pulsing aura
-  ctx.globalAlpha=0.2+Math.abs(Math.sin(t*2))*0.15;
-  ctx.fillStyle="#ff0000";
-  ctx.beginPath(); ctx.arc(ex,ey-s,s*2.5,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
+  // Arms
+  $r(ctx,ex-s-5,ey-s+4,6,12,"#440000"); $r(ctx,ex+s-1,ey-s+4,6,12,"#440000");
+
+  // Big round head
+  _circle(ctx, ex, ey - s * 2 + 1, s * 1.3, "#550000");
+
+  // Crown
+  ctx.fillStyle = "#cc4400";
+  for(let i = 0; i < 5; i++) {
+    const cx2 = ex - s + i * s * 0.55;
+    ctx.beginPath(); ctx.moveTo(cx2, ey-s*2-s*0.9); ctx.lineTo(cx2+s*0.25, ey-s*2-s*1.5); ctx.lineTo(cx2+s*0.5, ey-s*2-s*0.9); ctx.closePath(); ctx.fill();
+  }
+  $r(ctx, ex-s, ey-s*2-s*0.9, s*2, 4, "#882200");
+
+  // Glowing eyes
+  ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 12;
+  _circle(ctx, ex - s * 0.38, ey - s * 2 + 1, s * 0.32, "#ff0000");
+  _circle(ctx, ex + s * 0.38, ey - s * 2 + 1, s * 0.32, "#ff0000");
+  ctx.shadowBlur = 0;
+  _circle(ctx, ex - s * 0.38, ey - s * 2 + 1, s * 0.15, "#ffff00");
+  _circle(ctx, ex + s * 0.38, ey - s * 2 + 1, s * 0.15, "#ffff00");
+
+  // Mouth (sinister grin)
+  ctx.strokeStyle = "#ff4400"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(ex, ey - s * 2 + 6, s * 0.45, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = "#ffee00";
+  for(let i = 0; i < 4; i++) ctx.fillRect(ex - s*0.5 + i * s*0.32, ey - s*2 + 6, s*0.18, s*0.28);
 }
 
 // ─── Projectile drawing ───────────────────────────────────────────────────
